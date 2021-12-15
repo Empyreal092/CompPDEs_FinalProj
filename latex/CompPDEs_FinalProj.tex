@@ -32,7 +32,7 @@
 
 % Edit these as appropriate
 \newcommand\course{Comp PDEs}
-\newcommand\hwnumber{3}                  % <-- homework number
+\newcommand\hwnumber{}                  % <-- homework number
 \newcommand\NetIDa{\ }           % <-- NetID of person #1
 \newcommand\NetIDb{Ryan Shijie Du}           % <-- NetID of person #2 (Comment this line out for problem sets)
 
@@ -40,7 +40,7 @@
 \headheight 35pt
 \lhead{\NetIDa}
 \lhead{\NetIDa\\\NetIDb}                 % <-- Comment this line out for problem sets (make sure you are person #1)
-\chead{\textbf{\Large Homework \hwnumber}}
+\chead{\textbf{\Large Final Project}}
 \rhead{\course \\ \today}
 \lfoot{}
 \cfoot{}
@@ -89,138 +89,7 @@
 
 \thispagestyle{fancyplain}
 \section{Navier-Stokes Velocity Solver}
-We would like to numerically solve the Navier-Stokes equation:
-\begin{align*}
-    \begin{cases}
-    \pe_t\ve u+\ve u\cdot\nabla\ve u=-\nabla p+\mu\nabla^2\ve u\\
-    \nabla\cdot\ve u = 0.
-    \end{cases}
-\end{align*}
-We could reformulate the equation in the vorticity-stream formulation by using the fact that the velocity field is 2D and incompressible. First, we define the streamfunction $\psi$ and the vorticity $\omega$ ($u$ is the $x$-component of $\ve u$ and $v$ is the $y$-component of $\ve u$) (the notation is a sign different from the ones in the note to match my (GFD) preference):
-\begin{align}
-    &-\pe_y \psi = u,\quad  \pe_x \psi = v;\nonumber\\
-    &\omega = -\pe_y u+\pe_x v = \nabla^2 \psi.\label{eq:relate_omega_psi}
-\end{align}
-Then the vorticity-stream formulation is:
-\begin{align}
-    &\pe_t\omega+\ve u\cdot\nabla\omega = \mu\nabla^2\omega\label{eq:vort_stream}\\
-    \fff&\pe_t\omega+J(\psi,\omega) = \mu\nabla^2\omega\nonumber.
-\end{align}
-and this equation is closed since $\ve u,\psi$ can be solved from $\omega$ via \eqref{eq:relate_omega_psi}.
 
-Now we write \eqref{eq:vort_stream} in Fourier space:
-\begin{align}
-    \pe_t\hat\omega+\mathcal{F}[\ve u\cdot\nabla\omega] = \mu(-k^2-\ell^2)\hat\omega\label{eq:eq_spectral}
-\end{align}
-where $\hat\omega$ is the Fourier representation of the $\omega$ and $\mathcal{F}[\ve u\cdot\nabla\omega]$ is the Fourier representation of the nonlinear term. To evaluate this, we evaluate it in the real space and transport it back to Fourier space. This is why the method is pseudo-spectral.
-
-We can represent \eqref{eq:eq_spectral} by shorthand:
-\begin{align*}
-    \pe\hat\omega = \ve A\hat\omega+\ve B\left(\hat\omega\right)
-\end{align*}
-where $\ve A\hat\omega = \mu(-k^2-\ell^2)\hat\omega$ is stiff but linear and $\ve B(\hat\omega) = -\mathcal{F}[\ve u\cdot\nabla\omega]$ is not-stiff and nonlinear. To solve this kind of problem, we could use the second order SBDF2 timestepping:
-\begin{align*}
-    &\hat\omega^{n+1} = \frac{4}{3}\hat\omega^n-\frac{1}{3}\hat\omega^{n-1}+\frac{2\Delta t}{3}\ve A\hat\omega^{n+1}+\frac{2\Delta t}{3}\left[2\ve B(\hat\omega^n)-\ve B(\hat\omega^{n-1})\right]\\
-    \fff &\left(\ve I-\frac{2\Delta t}{3}\ve A\right)\hat\omega^{n+1} = \frac{4}{3}\hat\omega^n-\frac{1}{3}\hat\omega^{n-1}+\frac{2\Delta t}{3}\left[2\ve B(\hat\omega^n)-\ve B(\hat\omega^{n-1})\right].
-\end{align*}
-We can solve the last equation per $k,\ell$ pair. Or the fourth order IF-RK4 method \cite[(18-19)]{Yang_21_MMTNum}. Written in another form, the algorithm is:
-\begin{align*}
-    y_1 &= \hat\omega^{n}\\
-    y_2 &= \exp(\ve A\Delta t/2)\hat\omega^n+\frac{\tau}{2} \exp(\ve A\Delta t/2)\ve B(y_1) \\
-    y_3 &= \exp(\ve A\Delta t/2)\hat\omega^n+\frac{\tau}{2} \ve B(y_2) \\
-    y_4 &= \exp(\ve A\Delta t)\hat\omega^n+\tau \exp(\ve A\Delta t/2)\ve B(y_3)
-\end{align*}
-then
-\begin{align*}
-    \hat\omega^{n+1} = \exp(\ve A\Delta t)\hat\omega_n+\frac{\tau}{6}\left[ \exp(\ve A\Delta t)\ve B(y_1)+2\exp(\ve A\Delta t/2)\ve B(y_2)+2\exp(\ve A\Delta t/2)\ve B(y_3)+\ve B(y_4) \right].
-\end{align*}
-
-\subsection{Taylor Vortex}
-We use the famous exact solution of NS: Taylor Vortex to test our code. We solve it from $t = 0$ to $T = 0.25$ with the parameters given in the HW. We know that the Taylor Vortex solution only has a few modes, so we can pick a small $Nx,Ny$ and it will spatially represent the solution exactly. We here use $Nx = Ny = 9$. To compare numerical solution to the real solution to get an error, we sample the solutions on the fine grid of $Nx = Ny = 1025$. Figure \ref{fig:time_conv_ord_taylor_} shows the result and we see that the convergence order match the expected (theoretical) value.
-\begin{figure}[H]
-    \centering
-    \includegraphics{fig/time_conv_ord_taylor_2}
-    \includegraphics{fig/time_conv_ord_taylor_4}
-    \caption{}\label{fig:time_conv_ord_taylor_}
-\end{figure}
-
-As for computational cost, we focus on the \texttt{fft} and \texttt{ifft} number since they dominate the cost. For that, the number of $\ve B(\hat\omega)$ evaluation is a good proxy. For SBDF2, only one evaluation is needed (since we can reuse the value from the last timestep). While IF-RK4, we need four evaluations. Thus IF-RK4 is definitely more expensive per timestep. But it is 4th order so it can be argued that the increase cost is well worth it.
-
-\subsection{Vortices}
-Now we solve the NS equation with an IC of 3 vortices. Note that velocity still has the constant $\ve v_0 = 1$. 
-
-First, since the $\omega$ field is no longer trivial in Fourier space, we need to determine the $Nx,Ny$ value so that spatial error is machine precision. This is also a good opportunity to study the effects of anti-aliasing. 
-
-We use an evaluation of the RHS on a fine grid (\red{$Nx=Ny=65$ for the base grid, anti-alias times this by 3/2}) as the ``truth'' and compare the evaluation of the RHS on coarser grids to it to produce the error. Note the comparison is done by sampling the coarser solutions on the fine grid of $Nx = Ny = 65$. Figure \ref{fig:rhs_aa_o} shows spectral convergence of the RHS evaluation. And we can see that anti-aliasing does help reduce the error of the non-linear term.
-\begin{figure}[H]
-    \centering
-    \includegraphics{fig/rhs_aa_on}
-    \includegraphics{fig/rhs_aa_off}
-    \caption{}\label{fig:rhs_aa_o}
-\end{figure}
-Note that here to reach machine precision, I used 9 copies of the vortices to make the data periodic. If I do not do that, the convergence is still spectral, but the error bottom out at around $10^{-8}$.
-
-We can now set $Nx = Ny = 65$, and test the convergence order of the timestepping. We use the empirical error estimate from successively doubling $Nt$, and the error is calculated on the fine grid of $Nx = Ny = 1025$. Figure \ref{fig:time_conv_ord_vort_} shows agreement with the theoretical order of convergence.
-\begin{figure}[H]
-    \centering
-    \includegraphics{fig/time_conv_ord_vort_2}
-    \includegraphics{fig/time_conv_ord_vort_4}
-    \caption{}\label{fig:time_conv_ord_vort_}
-\end{figure}
-
-\subsection{Compre with Finite Volume}
-Compared to a Finite Volume method, we need significantly fewer spatial grid for low spatial error. But we need similar number of time steps for low overall error. 
-
-Thus we should compare the cost of each timestep of the two methods. Spectral methods need \texttt{fft} and \texttt{ifft}, but they are not too costly since they are of order $O(n\log n)$ ($n = NxNy$ here). For our particular case, the ``matrix solve'' is ``diagonal'' and thus the cost is small at $O(n)$. In comparison, Finite Volume needs to solve a banded matrix (but non-zero element not close to the diagonal), thus the cost can be prohibitive (\red{$O(n^{3/2})$}\footnote{Yes this make sense. The distance of the non-zero diagonal line is $Nx = n^{1/2}$ away from the diagonal.}), especially $n = NxNy$ is a lot larger for Finite Volume method. Thus I conclude that for cost, Pseudospectral method is cheaper. Note that this paragraph only applies to constant coefficient. 
-
-Pseudospectral method is also easier to implement in my opinion. They are ODEs therefore timestepping can use readily available timestepping code (e.g.: IF-RK4 I used here is from my code for research). In comparison, Finite Volume code like HW2 is less generalizable. For the same reason (plus easy spatial error control), it is easier to reach higher order convergence with Pseudospectral method.
-
-Finite Volume is eaiser to generalize to include boundary condition. Pseudospectral method with boundary condition seems complicated... And it loses a bit of the cost benefit (matrix no longer diagonal, is even dense?).
-
-Pseudospectral method is powerless against discontinuous solutions. And when the solution is non-smooth, we might need large $Nx,Ny$ to solve it spatially. This ruins one efficientcy of Pseudospectral method. 
-
-Later on we will see that Pseudospectral method is not immune to stability problem. I do not have enough experience to tell which one is better (easier) for stability. 
-
-\section{Advection-Diffusion Solver}
-Both SBDF2 and IF-RK4\footnote{This was not too hard since I can just evaluate the velocity and pressure at any time. Should have done this yesterday...} are implemented.
-
-\subsection{Taylor Vortex Manufactured Solution}
-We could use Taylor Vortex as a manufactured solution to test our code. We take the exact velocity data from the formula in the numerical code. We use $Nx = Ny = 9$ and it should resolve the space exactly. We test the order of convergence of the timestepping method. Figure \ref{fig:time_conv_ord_advdiff_taylor_2} shows good convergence result.
-\begin{figure}[H]
-    \centering
-    \includegraphics{fig/time_conv_ord_advdiff_taylor_2}
-    \includegraphics{fig/time_conv_ord_advdiff_taylor_4}
-    \caption{}\label{fig:time_conv_ord_advdiff_taylor_2}
-\end{figure}
-
-\subsection{Constant Velocity}
-Now we have pure advection with constant velocity $\ve v_0 = 1$. We start with the initial concentration
-\begin{align*}
-    c(x,y,0) = \left[ \sin\left(\frac{\pi x}{L}\right)\sin\left(\frac{\pi y}{L}\right) \right]^p.
-\end{align*}
-After $T = 1$. the peak should be advection back to its initial position. Thus this can be a test of our numerical method. 
-
-Note that since we have constant velocity, the PDE is trivial in Fourier space:
-\begin{align*}
-    \pe_t\hat c_k = -i(ku_0+\ell v_0)\hat c_k.
-\end{align*}
-And we see that all the eigenvalues of this ODE are purely imaginary. Because of this we expect our numerical method to experience stability issues. And we expect SBDF2 to be not stable since its stability region does not include the imaginary axis, but since stability in fact does not need $\leq 1$ but $\leq 1+C\tau$, small enough timestep could still make it stable. For IF-RK4, since its stability region does include part of the imaginary axis, we expect to only need $Nt = O(Nx)$.
-
-First, we pick $p = 2$. And a choice of $N_x = Ny = 9$ make sure we resolve space. We then test the order of our timestepping. Figure \ref{fig:time_conv_ord_advdiff_const_p2_N9} shows the expected convergence behavior for larger $Nx$. For smaller $Nx$, there is growth of error due to instability (in time).
-\begin{figure}[H]
-    \centering
-    \includegraphics{fig/time_conv_ord_advdiff_const_p2_N9}
-    \includegraphics{fig/time_conv_ord_advdiff_const_RK4_p2_N9}
-    \caption{}\label{fig:time_conv_ord_advdiff_const_p2_N9}
-\end{figure}
-The problem of instability is worse for larger $p$, which requires larger $Nx,Ny$. Here we set $p=20$ and $Nx = Ny = 33$ and perform the convergence tests. Figure \ref{fig:time_conv_ord_advdiff_const_p20_N33} shows the convergence result for $Nt = [3:4097]$. We see the instability ruins the result for much of the lower $Nt$'s. And IF-RK4 is stable for smaller value of $Nt$.
-\begin{figure}[H]
-    \centering
-    \includegraphics{fig/time_conv_ord_advdiff_const_p20_N33}
-    \includegraphics{fig/time_conv_ord_advdiff_const_RK4_p20_N33}
-    \caption{}\label{fig:time_conv_ord_advdiff_const_p20_N33}
-\end{figure}
-From these examples and some more experiments, we have that the $Nt$ needed for stability is $O(Nx^2)$ for SBDF2 and $O(Nx)$ for IF-RK4. This is another argument to choose IF-RK4. 
 
 \newpage
 \bibliographystyle{alpha}
