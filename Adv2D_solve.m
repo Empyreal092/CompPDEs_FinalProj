@@ -17,8 +17,8 @@ IC_type = "3Gaussian"; N_resolve = 81;
 % time_step_method = "Euler";
 % time_step_method = "Trap";
 % time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
-time_step_method = "RK4SL";
-% time_step_method = "IF-RK4PS";
+% time_step_method = "RK4SL";
+time_step_method = "IF-RK4PS";
 
 finufft_interp = true;
 
@@ -35,7 +35,7 @@ switch vel_type
     case "Taylor"
         CFL_num = 1.5;
         if time_step_method == "IF-RK4PS"
-            CFL_num = 0.5;
+            CFL_num = 1.5;
         end
 end
 %%
@@ -77,7 +77,7 @@ end
 if if_test_converg_order_truth || if_test_converg_order_empiri
     error_ary_mat = [];
     
-    N_pow = [5:10];
+    N_pow = [5:13];
     N_ary = round(2.^N_pow)+1;
     
     if if_test_converg_order_truth
@@ -236,18 +236,18 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
 end
 
 %%
-if finufft_interp
-    figure(100)
-    savefig("latex/figs/"+"conv_order_finu_"+time_step_method)
-%     figure(101)
-%     savefig("latex/figs/"+"c_init_finu_"+time_step_method)
-%     figure(102)
-%     savefig("latex/figs/"+"c_final_finu_"+time_step_method)
-else
+% if finufft_interp
 %     figure(100)
-%     savefig("latex/figs/"+"conv_order_"+time_step_method)
-%     figure(101)
-%     savefig("latex/figs/"+"c_init_"+time_step_method)
-%     figure(102)
-%     savefig("latex/figs/"+"c_final_"+time_step_method)
-end
+%     savefig("latex/figs/"+"conv_order_finu_"+time_step_method)
+% %     figure(101)
+% %     savefig("latex/figs/"+"c_init_finu_"+time_step_method)
+% %     figure(102)
+% %     savefig("latex/figs/"+"c_final_finu_"+time_step_method)
+% else
+% %     figure(100)
+% %     savefig("latex/figs/"+"conv_order_"+time_step_method)
+% %     figure(101)
+% %     savefig("latex/figs/"+"c_init_"+time_step_method)
+% %     figure(102)
+% %     savefig("latex/figs/"+"c_final_"+time_step_method)
+% end
