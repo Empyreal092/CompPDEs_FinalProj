@@ -15,10 +15,6 @@
 \usepackage{float}
 \usepackage{url}
 
-%\usepackage[style=numeric, sorting=none]{biblatex}
-%%\addbibresource{citation.bib}
-%\bibliography{citation.bib}
-
 \hypersetup{%
   colorlinks=true,
   linkcolor=blue,
@@ -30,52 +26,10 @@
 \setlength{\parindent}{0.0in}
 \setlength{\parskip}{0.1in}
 
-% Edit these as appropriate
-\newcommand\course{Comp PDEs}
-\newcommand\hwnumber{}                  % <-- homework number
-\newcommand\NetIDa{\ }           % <-- NetID of person #1
-\newcommand\NetIDb{Ryan Shijie Du}           % <-- NetID of person #2 (Comment this line out for problem sets)
+\input{command.tex}
 
-\pagestyle{empty}
-\headheight 35pt
-\lhead{\NetIDa}
-\lhead{\NetIDa\\\NetIDb}                 % <-- Comment this line out for problem sets (make sure you are person #1)
-\chead{\textbf{\Large Final Project}}
-\rhead{\course \\ \today}
-\lfoot{}
-\cfoot{}
-\rfoot{\small\thepage}
-\headsep 1.5em
-
-\newcommand{\de}{\mathrm{d}}
-\newcommand{\pe}{\partial}
-
-\newcommand{\dsp}{\displaystyle}
-
-\newcommand{\norm}[1]{\left\Vert #1 \right\Vert}
-\newcommand{\mean}[1]{\left\langle #1 \right\rangle}
-
-\newcommand{\ve}[1]{\boldsymbol{#1}}
-
-\newcommand{\thus}{\Rightarrow \quad }
-\newcommand{\fff}{\iff\quad}
-
-\newcommand{\re}{\text{Re}}
-\newcommand{\im}{\text{Im}}
-
-\newcommand{\APE}{\text{APE}}
-\newcommand{\KE}{\text{KE}}
-
-\newcommand{\hot}{\text{h.o.t.}}
-\newcommand{\inner}[2]{\left\langle #1,#2\right\rangle}
-
-\newcommand{\ssp}{\left.\qquad\right.}
-
-\newcommand{\var}{\text{var}}
-\newcommand{\cov}{\text{cov}}
-
-\newcommand{\red}{\textcolor{red}}
-
+\renewcommand\thesection{\arabic{section}}
+\renewcommand\thesubsection{(\arabic{section}.\alph{subsection})}
 \titleformat{\subsection}[runin]
         {\normalfont\bfseries}
         {(\arabic{section}.\alph{subsection})}% the label and number
@@ -83,12 +37,74 @@
         {}% formatting commands applied just to subsection title
         []% punctuation or other commands following subsection title
 
-\begin{document}
-\renewcommand\thesection{\arabic{section}.}
-\renewcommand\thesubsection{(\arabic{section}.\alph{subsection})}
+\author{Ryan Shijie Du}
+\date{\today}
+\title{An Exploration of Semi-Lagrangian Methods for Advection
+\\\vspace{0.3cm} \small Final Project for the Course: Computational Methods For Classical PDEs In The Physical Sciences}
 
-\thispagestyle{fancyplain}
-\section{Navier-Stokes Velocity Solver}
+\begin{document}
+
+\newcommand{\sml}{\text{Semi-Lagrangian}}
+\maketitle
+\begin{abstract}
+We explore using Semi-Lagrangian numerical methods to solve linear and nonlinear advection problem. The main benefit of \sml\ methods is that they are stable for large timestep. In particular it is stable for timestep size where the Courant–Friedrichs–Lewy (CFL) number defined in the traditional finite difference sense is larger than one. But for a \sml\;scheme to be accurate, we need to solve for the departure points and then interpolate the advected field onto the departure points, both to high accuracy. We explore several \sml\;schemes and reach fourth order space-time accuracy for linear advection where the advection velocity is known a priori. And for nonlinear advection, where the velocity is obtained from the advected field, we have third order. We also explore spectral interpolation and reach the same order of accuracy but without the need for spacial resolution refinement. 
+\end{abstract}
+
+\section{Introduction}
+We want to solve the linear advection of a passive tracer, with the Partial Differential Equation (PDE):
+\begin{align}
+    \frac{\DD}{\DD t}c(\ve x(t),t) = \frac{\pe}{\pe t}c(\ve x,t)+\ve u(\ve x,t)\cdot\nabla c(\ve x,t) = 0\label{eq:linear_adv}
+\end{align}
+where $c$ is the concentration of the passive tracer of interests, $\ve x(t)$ is the Lagrangian trajectories of a fluid parcel, and $\ve u$ is the velocity is the underlying flow. We have the relation between $\ve x(t)$ and $\ve u$ is the ODE
+\begin{align}
+    \frac{\de}{\de t}\ve x(t) = \ve u(\ve x,t).\label{eq:x_ODE}
+\end{align}
+\eqref{eq:linear_adv} says that for such a passive tracer without diffusion, the concentration $c$ is constant along the Lagrangian trajectory (i.e.: $\ve x(t)$). 
+
+From this fact, one might design a Lagrangian approach of solving \eqref{eq:linear_adv}, where we solve the ODE \eqref{eq:x_ODE} for a set of particles in time. Then the advection field $c$ at final time $T$ can be obtained from the knowing the final position of the particles since 
+$$c(\ve x(0),0) = c(\ve x(T),T).$$
+However, this approach degrades in accuracy in time since the initial will-spaced particles might evolve to irregular shapes and leaving big gaps where no information about $c$ is available. This problem is especially dire for compressible flows. 
+
+\sml\;combines the Eulerian approach and the Lagrangian approach. In a nutshell, at each timestep we know $c$ at time $t$ on a regular \textit{Eulerian} grid $\ve x_i$ and we want to we calculate the information about $c$ at $t+\Delta t$ on the same regular \textit{Eulerian} grid. To do this, we use
+$$c(\ve x_i,t+\Delta t) = c(\hat{\ve x}_i,t)$$
+where $\hat{\ve x}_i$ is the departure point for $\ve x_i$ such that a \textit{Lagrangian} fluid trajectory goes through $\hat{\ve x}_i$ (resp. ${\ve x}_i$) at time $t$ (resp. $t+\Delta t$). The Lagrangian treatment of advection in each timestep allows for bigger time steps to be taken, and we still maintain the grid structure in Eulerian space. 
+
+In general $\hat{\ve x}_i$ will not be on a grid point, therefore we need to interpolate to obtain an estimate. And except in trivial flows, we do not know the departure point $\hat{\ve x}_i$ exactly, and we need to numerically solve for an approximation. The main question to answer for \sml\;numerical method is how do we calculate the departure points $\hat{\ve{x}}_i$ and do the interpolation, and what are their properties. 
+For the rest of the report we will explore several time integrating and space interpolation schemes of various order. We will use them to solve the linear advection problem \eqref{eq:linear_adv}, but also nonlinear advection problem like the 2D inviscid and incompressible Navier-Stokes equation \eqref{eq:2d_Nav}. The report will be organized as such: in Section \ref{sec:interp1D} we will test many interpolation schemes by using them to solve the 1D linear advection scheme with constant velocity. Section \ref{sec:linear_adv} contains the test of \sml\;Method on 2D linear advection problem (with constant and variable velocity field). !!!
+
+\section{Interpolation Schemes, Tested in 1D Constant Advection}\label{sec:interp1D}
+We first investigate the property of some interpolation scheme when used in \sml\;methods. We solve 1D constant velocity advection problem: 
+\begin{align*}
+        \frac{\DD}{\DD t}c(x(t),t) = \frac{\pe}{\pe t}c(x,t)+ u \frac{\pe}{\pe x}c(x,t) = 0.
+\end{align*}
+This is because this problem is enough to show the properties of various interpolation schemes, and it is easy to visualize so that we can determine the nature of the error produced. Variable velocity case would not help with our investigation, since timestep error would pollute the interpolation error. %And it is harder to justify \eqref{eq:linear_adv} in 1D when velocity is non-constant and thus compressible (but possible, see \cite[(1-3)]{diamantakis}). 
+
+We set the domain to be $[0,1)$ periodic, and solve for $t\in [0,1]$. $u = 1$ constant so that at $T = 1$, the tracer should be advection around the domain to its original position. This provide us with a test of accuracy of the solution. Since $u$ is constant, we know the departure points a priori thus interpolation is the only source of errors. There is no error in time, we fix the timestep constant as 7 (this is an odd number, and $Nx$ is always even, to ensure that we are not landing on a grid point). To investigate the order of convergence for the interpolation method, we vary the spacial resolution. We solve the problem with two initial conditions, one power of trigonometric function (refer this to ``sinp'') and the other a step function:
+\begin{align*}
+    c(x,0) &= [\sin(\pi*x)]^p \hspace{1cm}\text{with }p = 40;\\
+    c(x,0) &= \chi_{(1/4,1/2)}.
+\end{align*}
+
+We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function. (We do not use Lagrange polynomial interpolation mostly since I could not find a good implementation in MATLAB available.\footnote{In my search, I saw claims that there is a reason why (quadratic and cubic) Lagrange polynomial is not implemented in MATLAB, and it is because it is a bad idea. But I could not figure out why it is a bad idea. I don't think it is because of the Runge's phenomenon since it is only application when the polynomial order is higher than 3.}) We start with \texttt{linear}, \texttt{cubic}\footnote{not cubic Lagrangian, but instead cub interpolation in \cite{keys_cubic_1981}.}, and \texttt{spline} since they share the same properties.
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/}
+    \includegraphics{figs/}
+    \caption{}\label{fig:}
+\end{figure}
+
+
+
+\section{Semi-Lagrangian Method for 2D Linear Advection}\label{sec:linear_adv}
+Introduction to the Euler scheme
+
+
+
+
+\section{Semi-Lagrangian Method for 2D Navier Stokes}\label{sec:nonli_adv}
+
+
+suppose we know the information about $c$ at a regular space grid $\ve x_i$ at time $t^{n}$ and we want to know $c$ at the same positions $\ve x_i$ at time $t^{n+1} = t^n+\Delta t$. For each position on the grid $\ve x_a^{n+1}$ ($a$ for arrival point), we advect the particles backward for $\Delta t$ to obtain its departure point $\ve x_d^n$ at time $t^n$. In general this point will not be on the grid $x_i$ where we know $c$, therefore an interpolation is needed to calculate $c(\ve x_d^n,t^n)$ from the known $c(\ve x_i,t^n)$. Theoretical argument 
 
 
 \newpage
