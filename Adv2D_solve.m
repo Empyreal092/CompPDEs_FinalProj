@@ -1,5 +1,5 @@
 clear all
-% close all
+close all
 addpath(genpath('Tools'))
 addpath(genpath('AdvStep'))
 addpath(genpath('IC_n_Vel_Data'))
@@ -17,10 +17,10 @@ IC_type = "3Gaussian"; N_resolve = 81;
 % time_step_method = "Euler";
 % time_step_method = "Trap";
 % time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
-time_step_method = "RK4SL";
-% time_step_method = "IF-RK4PS";
+% time_step_method = "RK4SL";
+time_step_method = "IF-RK4PS";
 
-finufft_interp = true;
+finufft_interp = false;
 
 disp("Time Step Method: "+time_step_method+"; Spectrual Interp: "+finufft_interp)
 
@@ -33,7 +33,10 @@ switch vel_type
             CFL_num = 8;
         end
     case "Taylor"
-        CFL_num = 1/3;
+        CFL_num = 1.5;
+        if time_step_method == "IF-RK4PS"
+            CFL_num = 0.5;
+        end
 end
 %%
 plot_timestep_numr = false;
@@ -74,7 +77,7 @@ end
 if if_test_converg_order_truth || if_test_converg_order_empiri
     error_ary_mat = [];
     
-    N_pow = [3:6];
+    N_pow = [5:10];
     N_ary = round(2.^N_pow)+1;
     
     if if_test_converg_order_truth
@@ -166,6 +169,22 @@ for N = N_ary
     end
     tracer_final = tracer_temp;
     
+    %% 
+    if N==N_ary(end)
+        figure(101)
+        pplot(8,0.78,8)
+        heatmap2d(IC_tracer_real,x_mesh,y_mesh); hold on
+        title("Initial Tracer Distrib $c(x,0)$")
+        xlabel("$x$"); ylabel("$y$")
+        pplot(8,0.78,8)
+        
+        figure(102)
+        pplot(8,0.78,8)
+        heatmap2d(tracer_final,x_mesh,y_mesh); hold on
+        title("$c(x,T)$; "+time_step_method)
+        xlabel("$x$"); ylabel("$y$")
+        pplot(8,0.78,8)
+    end
     %%
     if if_test_converg_order_truth && vel_type == "Constant"
         tracer_truth = IC_tracer_real;
@@ -212,6 +231,14 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
 
     pplot(8,0.8,8)
     legend('Location','best','NumColumns',1)
+    title("Method: "+time_step_method)
     hold off
 end
 
+%%
+figure(100)
+savefig("latex/figs/"+"conv_order_"+time_step_method)
+figure(101)
+savefig("latex/figs/"+"c_init_"+time_step_method)
+figure(102)
+savefig("latex/figs/"+"c_final_"+time_step_method)
