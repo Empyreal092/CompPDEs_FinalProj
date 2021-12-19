@@ -105,9 +105,11 @@ for N = N_ary
             figure(99)
             if T_curr > T-dt/2
                 if N==2^4
-                    plot([x_mesh x_mesh(1)+L],[tracer_temp tracer_temp(1)],'b-*','DisplayName',"Num Coarse"); hold on
+                    tracer_temp_course = tracer_temp;
+                    x_mesh_coarse = x_mesh;
                 elseif N==2^6
-                    plot([x_mesh x_mesh(1)+L],[tracer_temp tracer_temp(1)],'r-*','DisplayName',"Num Dense"); hold on
+                    plot([x_mesh x_mesh(1)+L],[tracer_temp tracer_temp(1)],'r-*','DisplayName',"$Nx=$"+64); hold on
+                    plot([x_mesh_coarse x_mesh_coarse(1)+L],[tracer_temp_course tracer_temp_course(1)],'b-*','DisplayName',"$Nx=$"+16); hold on
                 end
             end
         end
@@ -129,7 +131,7 @@ end
 figure(99)
 ylim([-0.2 1.2])
 ylabel('$c$'), xlabel('$x$')
-title("$Nt=$"+Nt+", $Nx=$"+N_plot+"; Interp Method: "+interp_method)
+title("$Nt=$"+Nt+"; Interp Method: "+interp_method)
 
 legend('Location','northeast','NumColumns',1)
 hold off
@@ -138,7 +140,7 @@ hold off
 if if_test_converg_order_truth
     figure(100)
     
-    if interp_method == "finufft"
+    if interp_method == "finufft" && IC_type ~= "step"
         semilogy(plot_input_ary,error_ary_mat(1,:),'bo','DisplayName','$c,\ell^1$'); hold on
         semilogy(plot_input_ary,error_ary_mat(2,:),'b^','DisplayName','$c,\ell^2$')
         semilogy(plot_input_ary,error_ary_mat(3,:),'bs','DisplayName','$c$, uniform')
@@ -158,7 +160,7 @@ if if_test_converg_order_truth
             case "spline"
                 loglog_ordofconv(plot_input_ary,error_ary_mat,4)
             case "finufft"
-                loglog_ordofconv(plot_input_ary,error_ary_mat,4)
+                loglog_ordofconv(plot_input_ary,error_ary_mat,1)
         end
     end
         
@@ -173,6 +175,7 @@ if if_test_converg_order_truth
 end
 
 %%
+% file_nm = "1D_cons_"+interp_method;
 file_nm = "1D_step_cons_"+interp_method;
 figure(99)
 savefig("latex/figs/"+file_nm+"_sol")
