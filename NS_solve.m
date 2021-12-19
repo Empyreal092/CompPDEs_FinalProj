@@ -7,19 +7,19 @@ addpath(genpath('IC_n_Vel_Data'))
 global L v0 Nx Ny dt ext_sz finufft_interp extrap_4th
 
 %%
-IC_type = "Taylor"; N_resolve = 9;
-% IC_type = "3Vortices"; N_resolve = 33;
+% IC_type = "Taylor"; N_resolve = 9;
+IC_type = "3Vortices"; N_resolve = 33;
 
 %%
-time_step_method = "Euler";
+% time_step_method = "Euler";
 % time_step_method = "Trap";
-% time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
+time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
 % time_step_method = "RK4SL"; extrap_4th = false;
 % time_step_method = "IF-RK4PS";
 
 initialize_w_realdata = false;
 
-finufft_interp = false;
+finufft_interp = true;
 
 disp("Time Step Method: "+time_step_method+"; Spectrual Interp: "+finufft_interp)
 
@@ -63,19 +63,13 @@ end
 if if_test_converg_order_truth || if_test_converg_order_empiri
     error_ary_mat = [];
     
-    switch IC_type
-        case "Taylor"
-            N_pow = [4:9];
-        case "3Vortices"
-            N_pow = [4:9];
-    end
-    
+    N_pow = [4:9];
+
     if finufft_interp
         N_pow = [1:6];
         N_ary = round(2.^N_pow);
     else
-        N_pow = [4:9];
-        N_ary = round(2.^N_pow);
+        N_ary = round(2.^N_pow)+1;
     end
     
     if if_test_converg_order_truth
@@ -103,7 +97,7 @@ for N = N_ary
     else
         Nt = round( ((N/CFL_num)*(T/L)*v0)/2 )*2;
     end
-    if finufft_interp && N ~= N_ary(end)
+    if finufft_interp && (N ~= N_ary(end)||IC_type == "Taylor")
         plot_input_ary = [plot_input_ary T/Nt];
     end
     
