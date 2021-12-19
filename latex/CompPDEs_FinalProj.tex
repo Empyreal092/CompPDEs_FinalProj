@@ -39,7 +39,7 @@
 
 \author{Ryan Shijie Du}
 \date{\today}
-\title{An Exploration of Semi-Lagrangian Methods for Advection
+\title{{An Exploration of Semi-Lagrangian Methods for Advection}
 \\\vspace{0.3cm} \small Final Project for the Course: Computational Methods For Classical PDEs In The Physical Sciences}
 
 \begin{document}
@@ -55,7 +55,7 @@ We want to solve the linear advection of a passive tracer, with the Partial Diff
 \begin{align}
     \frac{\DD}{\DD t}c(\ve X(t),t) = \frac{\pe}{\pe t}c(\ve x,t)+\ve u(\ve x,t)\cdot\nabla c(\ve x,t) = 0\label{eq:linear_adv}
 \end{align}
-where $c$ is the concentration of the passive tracer of interests, $\ve X(t)$ is the Lagrangian trajectories of a fluid parcel (capital $\ve X$ denotes a marker for a particular fluid parcel), and $\ve u$ is the velocity is the underlying flow. We have the relation between $\ve X(t)$ and $\ve u$ is the ODE
+where $c$ is the concentration of the passive tracer of interests, $\ve X(t)$ is the Lagrangian trajectories of a fluid parcel (capital $\ve X$ denotes a marker for a particular fluid parcel), and $\ve u$ is the velocity of the underlying flow. We have the relation between $\ve X(t)$ and $\ve u$ is the ODE
 \begin{align}
 \frac{\de}{\de t}\ve X(t) = \ve u(\ve X(t),t).\label{eq:x_ODE}
 \end{align}
@@ -66,18 +66,22 @@ $$c(\ve X(0),0) = c(\ve X(T),T).$$
 However, this approach degrades in accuracy in time since the initial will-spaced particles might evolve to irregular shapes and leaving big gaps where no information about $c$ is available. This problem is especially dire for compressible flows. 
 
 \sml\;combines the Eulerian approach and the Lagrangian approach. In a nutshell, at each timestep we know $c$ at time $t$ on a regular \textit{Eulerian} grid $\ve x_i$ and we want to we calculate the information about $c$ at $t+\Delta t$ on the same regular \textit{Eulerian} grid. To do this, we use
-$$c(\ve X_i,t+\Delta t) = c(\hat{\ve X}_i,t)$$
-where $\hat{\ve X}_i$ is the departure point for the fluid parcel marked at $\ve X_i$ such that a \textit{Lagrangian} fluid trajectory goes through $\hat{\ve x}_i$ (resp. ${\ve x}_i$) at time $t$ (resp. $t+\Delta t$). The Lagrangian treatment of advection in each timestep allows for bigger time steps to be taken, and we still maintain the grid structure in Eulerian space. 
+$$c(\ve X_i(t+\Delta t),t+\Delta t) = c({\ve X}_i(t),t).$$
+$\ve X_i(t+\Delta t) = \ve x_i$ since it is on the Eulerian grid, and we also use the notation $\hat{\ve x}_i = {\ve X}_i(t)$ is the departure point for the fluid parcel marked by $\ve X_i(t+\Delta t)$ such that a \textit{Lagrangian} fluid trajectory goes through $\hat{\ve x}_i$ (resp. ${\ve x}_i$) at time $t$ (resp. $t+\Delta t$).
+The Lagrangian treatment of advection in each timestep allows for bigger time steps to be taken, and we still maintain the grid structure in Eulerian space. 
 
-In general $\hat{\ve x}_i$ will not be on a grid point, therefore we need to interpolate to obtain an estimate. And except in trivial flows, we do not know the departure point $\hat{\ve x}_i$ exactly, and we need to numerically solve for an approximation. The main question to answer for \sml\;numerical method is how do we calculate the departure points $\hat{\ve{x}}_i$ and do the interpolation, and what are their properties. 
-For the rest of the report we will explore several time integrating and space interpolation schemes of various order. We will use them to solve the linear advection problem \eqref{eq:linear_adv}, but also nonlinear advection problem like the 2D inviscid and incompressible Navier-Stokes equation \eqref{eq:2d_Nav}. The report will be organized as such: in Section \ref{sec:interp1D} we will test many interpolation schemes by using them to solve the 1D linear advection scheme with constant velocity. Section \ref{sec:linear_adv} contains the test of \sml\;Method on 2D linear advection problem (with constant and variable velocity field). !!!
+In general the departure points $\hat{\ve x}_i$ will not be on a grid point, therefore we need to interpolate to obtain an estimate. And except in trivial flows, we do not know the departure point $\hat{\ve x}_i$ exactly, so we need to numerically solve for an approximation. The main question to answer for \sml\;numerical method is how do we calculate the departure points $\hat{\ve{x}}_i$ and how do we interpolate, and what are their properties. 
+
+For the rest of the report we will explore several time integrating and space interpolation schemes of various order. We will use them to solve the linear advection problem \eqref{eq:linear_adv}, but also nonlinear advection problem like the 2D inviscid and incompressible Navier-Stokes equation \eqref{eq:2d_Nav}. The report will be organized as such: in Section \ref{sec:interp1D} we will test many interpolation schemes by using them to solve the 1D linear advection scheme with constant velocity. Section \ref{sec:linear_adv} contains the test of \sml\;Method on 2D linear advection problem (with constant and variable, but known a priori, velocity field). Section \ref{sec:nonli_adv} studies \sml\;Method for 2D nonlinear advection problem (2D Navier-Stokes). And finally in Section \ref{sec:adv_NS} we solve linear advection problems where the velocity is obtained numerically. 
+
+The code used in this report is available \href{https://gitfront.io/r/ryansjdu/aed0e6533b2b541c9beaac9550ba64e21366dd33/CompPDEs-FinalProj/}{here}. To run them, you will also need to setup some tools available \href{https://github.com/Empyreal092/MATLAB_Tool}{here}. 
 
 \section{Interpolation Schemes, Tested in 1D Constant Advection}\label{sec:interp1D}
 We first investigate the property of some interpolation scheme when used in Semi-Lagrangian methods. We solve 1D constant velocity advection problem: 
 \begin{align*}
-        \frac{\DD}{\DD t}c(x(t),t) = \frac{\pe}{\pe t}c(x,t)+ u \frac{\pe}{\pe x}c(x,t) = 0.
+        \frac{\DD}{\DD t}c(X(t),t) = \frac{\pe}{\pe t}c(x,t)+ u \frac{\pe}{\pe x}c(x,t) = 0.
 \end{align*}
-This is because this problem is enough to show the properties of various interpolation schemes, and it is easy to visualize so that we can determine the nature of the error produced. Variable velocity case would not help with our investigation, since timestep error would pollute the interpolation error. %And it is harder to justify \eqref{eq:linear_adv} in 1D when velocity is non-constant and thus compressible (but possible, see \cite[(1-3)]{diamantakis}). 
+This problem is enough to show the properties of various interpolation schemes, and it is easy to visualize so that we can determine the nature of the error produced. Variable velocity case would not help with our investigation, since timestep error would pollute the interpolation error. %And it is harder to justify \eqref{eq:linear_adv} in 1D when velocity is non-constant and thus compressible (but possible, see \cite[(1-3)]{diamantakis}). 
 
 We set the domain to be $[0,1)$ periodic, and solve for $t\in [0,1]$. $u = 1$ constant so that at $T = 1$, the tracer should be advection around the domain to its original position. This provide us with a test of accuracy of the solution. Since $u$ is constant, we know the departure points a priori thus interpolation is the only source of errors. There is no error in time, we fix the timestep constant as 7 (this is an odd number, and $Nx$ is always even, to ensure that we are not landing on a grid point). To investigate the order of convergence for the interpolation method, we vary the spacial resolution ($Nx = 8:1024$). Note that our CFL number is larger than one and reaching about 150 when the spatial resolution is the most dense. This corroborate the fact that the \sml\;method is unconditionally stable. We solve the problem with a power of trigonometric function initial condition:
 \begin{align*}
@@ -391,7 +395,7 @@ First we solve the problem we solve in Section \ref{sec:linear_adv} but now with
     \caption{}\label{fig:NSAdv_c_final_Taylor_3Gaussian}
 \end{figure}
 
-Now we solve the problem where the velocity is initialize with three vorticity \eqref{eq:3Gauss}, and the tracer has initial condition sinp \eqref{eq:sinp2}. 
+Now we solve the problem where the velocity is initialize with three vorticity \eqref{eq:3Gauss}, and the tracer has initial condition sinp \eqref{eq:sinp2}. Here we use empirical error estimate. We set $L = 2\pi, v_0 = 1$ but now solve till $T = 4$. We fix $Nx = 49$. Essentially the same sized $\Delta t$ is needed to keep IF-RK4 stable. Then we have convincing fourth order convergence. This is the example where we solve the linear advection problem to moderately long time while still keeping accuracy.
 \begin{figure}[H]
     \centering
     \includegraphics{figs/NSAdv_c_final_3Vortices_sinp}
