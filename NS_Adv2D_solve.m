@@ -8,11 +8,11 @@ addpath(genpath('IC_n_Vel_Data'))
 global L v0 Nx Ny dt ext_sz finufft_interp
 
 %%
-vel_type = "Taylor";
-IC_type = "3Gaussian"; N_resolve = 81;
+% vel_type = "Taylor";
+% IC_type = "3Gaussian"; N_resolve = 81;
 
-% vel_type = "3Vortices";
-% IC_type = "sinp"; p = 2; N_resolve = 49;
+vel_type = "3Vortices";
+IC_type = "sinp"; p = 2; N_resolve = 49;
 
 %%
 NS_time_step_method = "IF-RK4PS";
@@ -50,7 +50,7 @@ end
 
 switch vel_type
     case "3Vortices"
-        T = 2;
+        T = 4;
         v0 = 1;
     case "Taylor"
         T = 0.5;
@@ -62,15 +62,15 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
     error_ary_mat_trac = [];
     error_ary_mat_vel =  [];
     
-    N_pow = [1:5];
-%     N_pow = [3:7];
+%     N_pow = [1:5];
+    N_pow = [4:8];
     N_ary = round(2.^N_pow);
     
     if if_test_converg_order_truth
-        plot_input_ary = L./N_ary;
+        plot_input_ary = T./N_ary;
         load('tracer_taylor_3vort_truth.mat')
     else
-        plot_input_ary = L./N_ary(1:end-1);
+        plot_input_ary = T./N_ary(1:end-1);
     end
 else
     N_ary = 2^7;
