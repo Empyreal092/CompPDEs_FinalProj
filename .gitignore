@@ -76,7 +76,15 @@ Thumbs.db
 *.fig
 *.gif
 #*.eps
+*converted-to.pdf
 
 #Data/
 
 !tracer_taylor_3vort_truth.mat
+
+Ignore_Code/
+
+
+###### LATEX Specific ######
+*.aux
+*.out
