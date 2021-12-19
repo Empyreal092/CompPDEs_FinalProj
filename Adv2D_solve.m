@@ -17,10 +17,10 @@ IC_type = "3Gaussian"; N_resolve = 81;
 % time_step_method = "Euler";
 % time_step_method = "Trap";
 % time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
-% time_step_method = "RK4SL";
-time_step_method = "IF-RK4PS";
+time_step_method = "RK4SL";
+% time_step_method = "IF-RK4PS";
 
-finufft_interp = false;
+finufft_interp = true;
 
 disp("Time Step Method: "+time_step_method+"; Spectrual Interp: "+finufft_interp)
 
@@ -236,9 +236,18 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
 end
 
 %%
-figure(100)
-savefig("latex/figs/"+"conv_order_"+time_step_method)
-figure(101)
-savefig("latex/figs/"+"c_init_"+time_step_method)
-figure(102)
-savefig("latex/figs/"+"c_final_"+time_step_method)
+if finufft_interp
+    figure(100)
+    savefig("latex/figs/"+"conv_order_finu_"+time_step_method)
+%     figure(101)
+%     savefig("latex/figs/"+"c_init_finu_"+time_step_method)
+%     figure(102)
+%     savefig("latex/figs/"+"c_final_finu_"+time_step_method)
+else
+%     figure(100)
+%     savefig("latex/figs/"+"conv_order_"+time_step_method)
+%     figure(101)
+%     savefig("latex/figs/"+"c_init_"+time_step_method)
+%     figure(102)
+%     savefig("latex/figs/"+"c_final_"+time_step_method)
+end
