@@ -7,19 +7,19 @@ addpath(genpath('IC_n_Vel_Data'))
 global L v0 Nx Ny dt ext_sz finufft_interp extrap_4th
 
 %%
-% IC_type = "Taylor"; N_resolve = 9;
-IC_type = "3Vortices"; N_resolve = 33;
+IC_type = "Taylor"; N_resolve = 9;
+% IC_type = "3Vortices"; N_resolve = 33;
 
 %%
-% time_step_method = "Euler";
+time_step_method = "Euler";
 % time_step_method = "Trap";
-time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
+% time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
 % time_step_method = "RK4SL"; extrap_4th = false;
 % time_step_method = "IF-RK4PS";
 
 initialize_w_realdata = false;
 
-finufft_interp = true;
+finufft_interp = false;
 
 disp("Time Step Method: "+time_step_method+"; Spectrual Interp: "+finufft_interp)
 
@@ -27,7 +27,7 @@ disp("Time Step Method: "+time_step_method+"; Spectrual Interp: "+finufft_interp
 if time_step_method == "IF-RK4PS"
     CFL_num = 1/8;
 else
-    CFL_num = 2;
+    CFL_num = 1.5;
 end
 
 %%
@@ -51,11 +51,11 @@ end
 switch IC_type
     case "Taylor"
         L = 1;
-        T = 1;
+        T = 0.25;
         v0 = 1;
     case "3Vortices"
         L = 2*pi;
-        T = 2*pi;
+        T = 1.5;
         v0 = 1;
 end
 
@@ -63,9 +63,20 @@ end
 if if_test_converg_order_truth || if_test_converg_order_empiri
     error_ary_mat = [];
     
-    N_pow = [4:8];
+    switch IC_type
+        case "Taylor"
+            N_pow = [4:9];
+        case "3Vortices"
+            N_pow = [4:9];
+    end
     
-    N_ary = round(2.^N_pow)+1;
+    if finufft_interp
+        N_pow = [1:6];
+        N_ary = round(2.^N_pow);
+    else
+        N_pow = [4:9];
+        N_ary = round(2.^N_pow);
+    end
     
     if if_test_converg_order_truth
         plot_input_ary = L./N_ary;
@@ -80,9 +91,21 @@ if if_test_converg_order_empiri
     omega_final_prev = NaN;
 end
 
+if finufft_interp
+    plot_input_ary = [];
+end
+
 for N = N_ary
     Nx = N; Ny = N;
-    Nt = round( ((N/CFL_num)*(T/L)*v0)/2 )*2;
+    
+    if finufft_interp
+        Nt = N;
+    else
+        Nt = round( ((N/CFL_num)*(T/L)*v0)/2 )*2;
+    end
+    if finufft_interp && N ~= N_ary(end)
+        plot_input_ary = [plot_input_ary T/Nt];
+    end
     
     if fix_spacegrid_num
         Nx = N_resolve; Ny = Nx;
@@ -165,6 +188,22 @@ for N = N_ary
     omega_final = omega_temp;
     
     %%
+    if N==N_ary(end)
+%         figure(101)
+%         pplot(8,0.78,8)
+%         heatmap2d(IC_omega_real,x_mesh,y_mesh); hold on
+%         title("Initial Tracer Distrib $c(x,0)$")
+%         xlabel("$x$"); ylabel("$y$")
+%         pplot(8,0.78,8)
+        
+        figure(102)
+        pplot(8,0.78,8)
+        heatmap2d(omega_final,x_mesh,y_mesh); hold on
+        title("$c(x,T)$; "+time_step_method)
+        xlabel("$x$"); ylabel("$y$")
+        pplot(8,0.78,8)
+    end
+    %%
     if if_test_converg_order_truth
         switch IC_type
             case "Taylor"
@@ -203,11 +242,29 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
     loglog(plot_input_ary,error_ary_mat(3,:),'bs','DisplayName','$c$, uniform')
     
     xlim([plot_input_ary(end) plot_input_ary(1)])
-    ylabel('error'), xlabel('$\Delta x$')
-    title(["IC: "+IC_type+"; Method: "+time_step_method])
+    ylabel('error'), 
+    if finufft_interp
+        title(["IC: "+IC_type+"; Method: "+time_step_method+" w/ FINUFFT"])
+        xlabel('$\Delta t$')
+    else
+        title(["IC: "+IC_type+"; Method: "+time_step_method+"; CFL $\approx $"+CFL_num])
+        xlabel('$\Delta x$')
+    end
     
     pplot(8,0.8,8)
     legend('Location','best','NumColumns',1)
     hold off
 end
+
+%%
+if finufft_interp
+    nm_tag = "_finu_";
+else
+    nm_tag = "_";
+end
+
+figure(100)
+savefig("latex/figs/"+"nonlin_conv_order_"+IC_type+nm_tag+time_step_method)
+figure(102)
+savefig("latex/figs/"+"nonlin_omega_final_"+IC_type+nm_tag+time_step_method)
 

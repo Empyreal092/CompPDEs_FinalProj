@@ -17,10 +17,10 @@ IC_type = "3Gaussian"; N_resolve = 81;
 % time_step_method = "Euler";
 % time_step_method = "Trap";
 % time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
-% time_step_method = "RK4SL";
-time_step_method = "IF-RK4PS";
+time_step_method = "RK4SL";
+% time_step_method = "IF-RK4PS";
 
-finufft_interp = true;
+finufft_interp = false;
 
 disp("Time Step Method: "+time_step_method+"; Spectrual Interp: "+finufft_interp)
 
@@ -76,9 +76,15 @@ end
 %%
 if if_test_converg_order_truth || if_test_converg_order_empiri
     error_ary_mat = [];
+
+    if finufft_interp
+        N_pow = [1:6];
+        N_ary = round(2.^N_pow);
+    else
+        N_pow = [5:10];
+        N_ary = round(2.^N_pow);
+    end
     
-    N_pow = [5:13];
-    N_ary = round(2.^N_pow)+1;
     
     if if_test_converg_order_truth
         plot_input_ary = L./N_ary;
@@ -93,9 +99,22 @@ if if_test_converg_order_empiri
     tracer_final_prev = NaN;
 end
 
+if finufft_interp
+    plot_input_ary = [];
+end
+
 for N = N_ary
     Nx = N; Ny = N;
-    Nt = round( ((N/CFL_num)*(T/L)*v0)/2 )*2;
+    
+    if finufft_interp
+        Nt = N;
+    else
+        Nt = round( ((N/CFL_num)*(T/L)*v0)/2 )*2;
+%         Nt = N/16;
+    end
+    if finufft_interp && N ~= N_ary(end)
+        plot_input_ary = [plot_input_ary T/Nt];
+    end
 
     if fix_timesteps_num
         Nt = 15;
@@ -223,7 +242,7 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
 
     xlim([plot_input_ary(end) plot_input_ary(1)])
     
-    ylabel('error'), xlabel('$\Delta x$')
+    ylabel('error'), %xlabel('$\Delta x$')
     switch vel_type
         case "Constant"
 %             title([vel_type+" Vel; "+"IC: "+IC_type])
@@ -231,23 +250,29 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
 
     pplot(8,0.8,8)
     legend('Location','best','NumColumns',1)
-    title("Method: "+time_step_method)
+    if finufft_interp
+        title(["Method: "+time_step_method+" w/ FINUFFT"])
+        xlabel('$\Delta t$')
+    else
+        title(["Method: "+time_step_method+"; CFL $\approx$ "+CFL_num])
+        xlabel('$\Delta x$')
+    end
     hold off
 end
 
 %%
-% if finufft_interp
-%     figure(100)
-%     savefig("latex/figs/"+"conv_order_finu_"+time_step_method)
-% %     figure(101)
-% %     savefig("latex/figs/"+"c_init_finu_"+time_step_method)
-% %     figure(102)
-% %     savefig("latex/figs/"+"c_final_finu_"+time_step_method)
-% else
-% %     figure(100)
-% %     savefig("latex/figs/"+"conv_order_"+time_step_method)
-% %     figure(101)
-% %     savefig("latex/figs/"+"c_init_"+time_step_method)
-% %     figure(102)
-% %     savefig("latex/figs/"+"c_final_"+time_step_method)
-% end
+if finufft_interp
+    figure(100)
+    savefig("latex/figs/"+"conv_order_finu_"+time_step_method)
+%     figure(101)
+%     savefig("latex/figs/"+"c_init_finu_"+time_step_method)
+%     figure(102)
+%     savefig("latex/figs/"+"c_final_finu_"+time_step_method)
+else
+    figure(100)
+    savefig("latex/figs/"+"conv_order_"+time_step_method)
+    figure(101)
+    savefig("latex/figs/"+"c_init_"+time_step_method)
+    figure(102)
+    savefig("latex/figs/"+"c_final_"+time_step_method)
+end
