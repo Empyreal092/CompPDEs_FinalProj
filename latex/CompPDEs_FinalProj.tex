@@ -73,7 +73,7 @@ In general $\hat{\ve x}_i$ will not be on a grid point, therefore we need to int
 For the rest of the report we will explore several time integrating and space interpolation schemes of various order. We will use them to solve the linear advection problem \eqref{eq:linear_adv}, but also nonlinear advection problem like the 2D inviscid and incompressible Navier-Stokes equation \eqref{eq:2d_Nav}. The report will be organized as such: in Section \ref{sec:interp1D} we will test many interpolation schemes by using them to solve the 1D linear advection scheme with constant velocity. Section \ref{sec:linear_adv} contains the test of \sml\;Method on 2D linear advection problem (with constant and variable velocity field). !!!
 
 \section{Interpolation Schemes, Tested in 1D Constant Advection}\label{sec:interp1D}
-We first investigate the property of some interpolation scheme when used in \sml\;methods. We solve 1D constant velocity advection problem: 
+We first investigate the property of some interpolation scheme when used in Semi-Lagrangian methods. We solve 1D constant velocity advection problem: 
 \begin{align*}
         \frac{\DD}{\DD t}c(x(t),t) = \frac{\pe}{\pe t}c(x,t)+ u \frac{\pe}{\pe x}c(x,t) = 0.
 \end{align*}
@@ -84,7 +84,7 @@ We set the domain to be $[0,1)$ periodic, and solve for $t\in [0,1]$. $u = 1$ co
     c(x,0) &= [\sin(\pi x)]^p \hspace{1cm}\text{with }p = 40.
 \end{align*}
 
-We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function as well as spectral interpolation method based on FINUFFT \cite{finufft_1,finufft_2}. (We do not use Lagrange polynomial interpolation mostly since I could not find a good implementation in MATLAB available.\footnote{In my search, I saw claims that there is a reason why (quadratic and cubic) Lagrange polynomial is not implemented in MATLAB, and it is because it is a bad idea. But I could not figure out why it is a bad idea. I don't think it is because of the Runge's phenomenon since it is only application when the polynomial order is higher than 3.}) We start with \texttt{linear}, which is Lagrange linear interpolation. Fig. \ref{fig:1D_cons_linear_} shows the result: the left is comparison of the numerical solutions to the truth, and the right is the plot for order of convergence. We see that the error is mainly diffusive, and the order of the interpolation is second. For constant velocity, \sml\;method is equivalent to the upwind method when the CFL number is less then one. Therefore it is reassuring to see that the nature of the error is the same (diffusive).
+We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function as well as spectral interpolation method based on FINUFFT \cite{finufft_1,finufft_2}. Note that for MATLAB's \texttt{interp1} function, we feed it padded data where we extend the function on the left and right by five points using periodicity. For all query point, we mod it to make sure that it says within $[0,L)$. (We do not use Lagrange polynomial interpolation mostly since I could not find a good implementation in MATLAB available.\footnote{In my search, I saw claims that there is a reason why (quadratic and cubic) Lagrange polynomial is not implemented in MATLAB, and it is because it is a bad idea. But I could not figure out why it is a bad idea. I don't think it is because of the Runge's phenomenon since it is only application when the polynomial order is higher than 3.}) We start with \texttt{linear}, which is Lagrange linear interpolation. Fig. \ref{fig:1D_cons_linear_} shows the result: the left is comparison of the numerical solutions to the truth, and the right is the plot for order of convergence. We see that the error is mainly diffusive, and the order of the interpolation is second. For constant velocity, \sml\;method is equivalent to the upwind method when the CFL number is less then one. Therefore it is reassuring to see that the nature of the error is the same (diffusive).
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_cons_linear_sol}
@@ -186,10 +186,10 @@ With these information, and the ``initial'' condition that $\ve X(t^{n+1}) = \ve
 \end{align*}
 The error in the departure point estimate $\hat{\ve x}^{(1)}_i$ is $\norm{\hat{\ve x}^{(1)}_i-\hat{\ve x}_i} = O(\Delta t^2)$ (cf. local truncation error for backward Euler). To match the time error, a second order linear interpolation of $c$ onto $\hat{\ve x}_i$ would suffice. Together the space-time local truncation error $O(\Delta t^2+\Delta x^2)$. Indeed, name the interpolated tracer to be $\overline{c}$, we have by triangular inequality
 \begin{align*}
-    \norm{\overline{c}(\hat{\ve x}^{(1)}_i)-c(\hat{\ve x}_i)} &\leq \norm{\overline{c}(\hat{\ve x}^{(1)}_i)-\overline{c}(\hat{\ve x}_i)}+\norm{\overline{c}(\hat{\ve x}_i)-c(\hat{\ve x}_i)}\\
+    \norm{\overline{c}(\hat{\ve x}^{(1)}_i,t^n)-c(\hat{\ve x}_i,t^n)} &\leq \norm{\overline{c}(\hat{\ve x}^{(1)}_i,t^n)-\overline{c}(\hat{\ve x}_i,t^n)}+\norm{\overline{c}(\hat{\ve x}_i,t^n)-c(\hat{\ve x}_i,t^n)}\\
     &\leq \text{Const}\cdot \norm{\hat{\ve x}^{(1)}_i-\hat{\ve x}_i}+O(\Delta t^2) = O(\Delta x^2+\Delta t^2).
 \end{align*}
-Now global error of this method is one plus the local truncation error, thus we have a first order accurate method. 
+Now global error of this method is one less than the local truncation error, thus we have a first order space-time accurate method. 
 
 We test the order of convergence on a sample problem. We use the inviscid Taylor vortex as our underlying velocity ($v_0 = 1, L = 2\pi$):
 \begin{align*}
@@ -208,19 +208,99 @@ We solve the problem numerically till $T = 0.5$ and empirically estimate the err
     \includegraphics{figs/c_final_IF-RK4PS}
     \caption{}\label{fig:c_init_IF}
 \end{figure}
-
+Then Fig. \ref{fig:c_final_Euler} shows on the left the tracer concentration that is solved by Euler Method at the finest space-time resolution and on the right the order of convergence from the empirically estimated error. Here we use $Nx = Ny= [2^5:2^{10}]+1$ but large timestep such that the CFL number $v_0\Delta t/\Delta x = 1.5$. This means $Nt = 2:54$, not many timesteps! (Note that Taylor vortex is a special flow that if we use it to advect a tracer for too long, the tracer field will develop small scale features that is hard to solve, thus we have chosen the rather short time window. Read Section \ref{sec:adv_NS} see an example with a larger time window.)
 \begin{figure}[H]
     \centering
-    \includegraphics{figs/2D_const_adv_all_interp}
-    \includegraphics{figs/2D_const_adv_finufft}
-    \caption{}\label{fig:}
+    \includegraphics{figs/c_final_Euler}
+    \includegraphics{figs/conv_order_Euler}
+    \caption{}\label{fig:c_final_Euler}
 \end{figure}
+
+A higher order method for solving ODE is the trapezoidal method. To generalize it to \sml\ method, we need to estimate the velocity at the departure point at $t^n$: $\ve u(\hat{\ve x}_i,t^n)$. We write the trapezoidal rule for the ODE \eqref{eq:x_ODE}:
+\begin{align*}
+    &\ve X(t^{n+1})-\ve X(t^{n}) = \frac{\Delta t}{2}\left[\ve u(X(t^{n}),t^n)+\ve u(X(t^{n+1}),t^{n+1})\right]\\
+    \fff &\ve x_i-\hat{\ve x}_i = \frac{\Delta t}{2}\left[\ve u(\hat{\ve x}_i,t^n)+\ve u(\ve x_i,t^{n+1})\right].
+\end{align*}
+We have in our hand for each $i$ a nonlinear equation, we can solve this via fix point:
+\begin{align*}
+    \hat{\ve x}_i^{(k+1)} = \ve x_i-\frac{\Delta t}{2}\left[\ve u(\hat{\ve x}_i^{(k)},t^n)+\ve u(\ve x_i,t^{n+1})\right]
+\end{align*}
+and we start the iteration by estimating $\hat{\ve x}_i^{(0)} = \hat{\ve x}_i$. As it turns out, to reach global second order accuracy and local third order accuracy, the highest that trapezoidal rule could reach, we only need to do one fixed point iterations and obtain $\hat{\ve x}_i^{(1)}$. Then we have the tracer field at time $t^{n+1}$ (remember that over-line means interpolated result)\footnote{This is just two fixed point iterations, but separating out the last evaluation from the fixed point iteration makes the concept of iteration number more consistent with the next MCD86 method.}
+\begin{align*}
+    &\hat{\ve x}_i^{(2)} = \ve x_i-\frac{\Delta t}{2}\left[\ve u(\hat{\ve x}_i^{(1)},t^n)+\ve u(\ve x_i,t^{n+1})\right]\\
+    &c({\ve x}_i,t^{n+1}) = \overline{c}(\hat{\ve x}_i^{(2)},t^{n}).
+\end{align*}
+A similar bound using triangular inequality is also possible for this method and it shows that we need a third order interpolation for interpolating the tracer field, thus we use \texttt{cubic}. We also need to interpolate to get the velocity field at $\hat{\ve x}_i^{(1)}$, as it turns out we only need second accuracy for that, thus we use \texttt{linear}. It is important to use the cheapest interpolation scheme possible since interpolation is the main of \sml\ method. This fact is mentioned in \cite{staniforth1991}: 
+\begin{quote}
+    ``For step (i), the order of the interpolation is much less important. Theoretically, McDonald (1987) has shown that one should use an interpolation of order one less than for step (ii).''
+\end{quote}
+Here McDonald (1987) refers to \cite{mcdonald1987}. Note that there are many other global space-time second order method, for example ones based on mid-point rule. Some examples are given in \cite{mcdonald1999} and in there the author provide a general formula for second order accurate schemes. I am not sure what are the differences between all of them and I only investigate this trapezoidal method because I thought it is the most conceptually simplistic. Now we show result, Fig. \ref{fig:c_final_Trap} shows the final tracer field on the let and the order of convergence result on the right. We see that the tracer fields look the same with the ``truth'' and the order of convergence is as expect, second order.
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/c_final_Trap}
+    \includegraphics{figs/conv_order_Trap}
+    \caption{}\label{fig:c_final_Trap}
+\end{figure}
+
+\cite{mcdonald1987} presents a global space-time third order accurate method. We first solve two nonlinear equations:
+\begin{align*}
+    &\ve X(t^{n+1})-\ve X(t^{n+1/2}) = \frac{\Delta t}{2}\left[\ve u(X(t^{n+1/2}),t^{n+1/2})\right];\\
+    &\ve X(t^{n+1})-\ve X(t^{n}) = {\Delta t}\left[\ve u(X(t^{n}),t^{n})\right].
+\end{align*}
+It turns out we need to do two iterations, then we evaluate the midpoint rule and get:
+\begin{align*}
+    &\ve p^{n} = X(t^{n+1})-\Delta t\cdot \ve u\left(\ve X(t^{n+1/2})^{(2)}\right);\\
+    &\ve q^{n-1} = X(t^{n+1})-2\Delta t\cdot \ve u\left(\ve X(t^{n})^{(2)}\right).
+\end{align*}
+Note that we know $X(t^{n+1}) = \ve x_i$. We interpolate to have the tracer field that those position
+\begin{align*}
+    &c_{\ve p}^n = c(\ve p,t^n);
+    &c_{\ve q}^{n-1} = c(\ve q,t^{n-1}).
+\end{align*}
+Finally, we obtain the tracer field at $t^{n+1}$ via
+\begin{align*}
+    c^{n+1} = \frac{1}{7}\left(8*c_{\ve p}^n-c_{\ve q}^{n-1}\right). 
+\end{align*}
+This method reaches global third order due to a cancellation of error from the two separate mid-point calculations. But this cancellation is not transparent unless we write out the error estimates for both. We again need to specify what order of interpolation is needed. For the final interpolation of the tracer field to obtain $c_{\ve p}^n$ and $c_{\ve q}^{n-1}$, we need fourth order, thus \texttt{spline} is used. We also need to interpolate $\ve u$ to $\ve X^{(1)}$ and $\ve X^{(2)}$. We need second and third order accuracy. Thus we use \texttt{linear} and \texttt{cubic} respectively. All together, we have global third order space-time convergence. And indeed, Fig. \ref{fig:c_final_MCD86} confirms this.
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/c_final_MCD86}
+    \includegraphics{figs/conv_order_MCD86}
+    \caption{}\label{fig:c_final_MCD86}
+\end{figure}
+
+The last method reaches high order convergence but it uses an opaque cancellation of error. High order accuracy can be reach for the linear advection problem more easily by using readily available ODE solver on \eqref{eq:x_ODE}. For example, we could use RK4 method to reach 4th order accuracy. We have RK4 applied to \eqref{eq:x_ODE}:
+\begin{align*}
+    \ve x^1 &= \ve x_i;\quad &&\ve u^1 = \ve u(x^1,t^{n+1})\\
+    \ve x^2 &= \ve x_i - \frac{\Delta t}{2} \ve u^1;\quad&&\ve u^2 = \ve u(x^2,t^{n+1/2})\\
+    \ve x^3 &= \ve x_i - \frac{\Delta t}{2} \ve u^2;\quad&&\ve u^3 = \ve u(x^2,t^{n+1/2})\\
+    \ve x^4 &= \ve x_i - \Delta t \ve u^3;\quad&&\ve u^4 = \ve u(x^4,t^{n})\\
+\end{align*}
+then
+\begin{align*}
+    \ve u^s = (\ve u^1+2\ve u^2+2\ve u^3+\ve u^4)/6.
+\end{align*}
+and 
+\begin{align*}
+    c(\ve x_i,t^{n+1}) = c(\ve x_i-\ve u^s\Delta t,t^{n}).
+\end{align*}
+Now that the departure point is solve to fifth order locally, we need a fifth order interpolation as well. We instead just use FINUFFT which is spectral. For all other interpolations within the RK4 steps, we could use one less order, thus \texttt{spline} is used. Fig. \ref{fig:c_final_RK4SL} shows good convergence result. 
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/c_final_RK4SL}
+    \includegraphics{figs/conv_order_RK4SL}
+    \caption{}\label{fig:c_final_RK4SL}
+\end{figure}
+It is curious why \sml\ method literature does not use RK method to solve for the departure point. We check the cost by counting the number of interpolations and their requires order. We compare RK3, which should be third order, with MCD86: RK3 needs three third and a forth order interpolation, while MCD86 needs two second, two third, and two forth order interpolation. It seems MCD86 is more expensive. We comment that the second and third RK4 step looks like a fixed point solver, and it might be that the RK4 method and classic \sml\ methods are more similar than the form suggests.
+
+We could replace all the interpolation with FINUFFT so that they are spectrally accurate. We give a large enough $Nx = Ny$ so that there is no spatial error (for 3 Gaussian, $Nx = Ny = 81$). Then we can fix the spatial resolution and improve accuracy by only refining the timestep. This is a good way to isolate the error produced by the timestepping. But this is also viable numerical method. 
 
 
 \section{Semi-Lagrangian Method for 2D Navier Stokes}\label{sec:nonli_adv}
 
 
-suppose we know the information about $c$ at a regular space grid $\ve x_i$ at time $t^{n}$ and we want to know $c$ at the same positions $\ve x_i$ at time $t^{n+1} = t^n+\Delta t$. For each position on the grid $\ve x_a^{n+1}$ ($a$ for arrival point), we advect the particles backward for $\Delta t$ to obtain its departure point $\ve x_d^n$ at time $t^n$. In general this point will not be on the grid $x_i$ where we know $c$, therefore an interpolation is needed to calculate $c(\ve x_d^n,t^n)$ from the known $c(\ve x_i,t^n)$. Theoretical argument 
+
+\section{Semi-Lagrangian Method for 2D Navier Stokes}\label{sec:adv_NS}
 
 
 \newpage
