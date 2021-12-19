@@ -163,9 +163,9 @@ Wrapping up this section, we have experimentally investigated the nature of the 
 
 \section{Semi-Lagrangian Method for 2D Linear Advection}\label{sec:linear_adv}
 We verify the lesson we learn from Section \ref{sec:interp1D} in 2D. We solve again the constant velocity advection problem with $[0,1)\times [0,1)$ with $\ve u = (1,1)$. We solve to $T = 2$ and compare the solution to the initial condition. We use a 2D trigonometric polynomial as initial condition:
-\begin{align*}
-    c(x,y,0) &= [\sin(\pi x)\sin(\pi y)]^p \hspace{1cm}\text{with }p = 2.
-\end{align*}
+\begin{align}
+    c(x,y,0) &= [\sin(\pi x)\sin(\pi y)]^p \hspace{1cm}\text{with }p = 2.\label{eq:sinp2}
+\end{align}
 We use $Nt = 15$ and $Nx = Ny = 8:256$ (CLF number = $1.2:34$). We show the resultant convergence order estimate in Fig. \ref{fig:2D_const_adv_all_interp}. We see that the order of convergence for \texttt{linear}, \texttt{cubic}, and \texttt{spline} are the same with the result in Section \ref{sec:interp1D}. And FINUFFT is accurate for all spatial resolution since our initial condition only needs a few Fourier mode to be represented accurately. 
 \begin{figure}[H]
     \centering
@@ -381,10 +381,23 @@ We continue the discussion of using RK method in \sml setting. The above result 
 In general, for nonlinear advection problem, extrapolation to get an estimate of the velocity field seems sketchy to me even when it seems that it works for low order extrapolation with moderate timestep (but still CFL number larger than one). And it is not a good idea to push the order higher, as shown in the RK4 example. I am interested in if there is an alternative high (larger than three) order \sml\ method that does not use polynomial extrapolation. 
 
 \section{Semi-Lagrangian Method for 2D Linear Advection, Cont.}\label{sec:adv_NS}
-We finish the note by solving linear advection problems where the velocity is obtained numerically. Given the disappointing result of \sml\ method when applied to nonlinear advection, we choose to stick with IF-RK4 method to solve the velocity. But for advection of the tracer, we use \sml RK4 w/ FINUFFT to solve. This work well with the pseudospectral IF-RK4 since we can keep space resolution fixed while improve the accuracy by refining time. 
+We finish the note by solving linear advection problems where the velocity is obtained numerically. Given the disappointing result of \sml\ method when applied to nonlinear advection, we choose to stick with IF-RK4 method to solve the velocity. But for advection of the tracer, we use \sml RK4 w/ FINUFFT to solve. This work well with the pseudospectral IF-RK4 since we can keep space resolution fixed while improve the accuracy by refining time. Since the \sml\ allows for larger timestep then IF-RK4, we use four steps of IF-RK4 to solve velocity within each single step of tracer solve using \sml\ RK4 w/ FINUFFT. Note here that we record the velocity at middle time $t^{n+1/2}$ and end time $t^{n+1}$ for use in the tracer solve.
 
-First we solve the problem we solve in Section \ref{sec:linear_adv} but now the velocity numerically solved. We initialize the $\omega$ field with the Taylor vortices \eqref{eq:taylor} and the tracer field as three Gaussians \eqref{eq:3Gauss}. We again have $L = 2\pi, v_0 = 1$, and we solve still $T = 0.5$. 
+First we solve the problem we solve in Section \ref{sec:linear_adv} but now with the velocity numerically solved. We initialize the $\omega$ field with the Taylor vortices \eqref{eq:taylor} and the tracer field as three Gaussians \eqref{eq:3Gauss}. We again have $L = 2\pi, v_0 = 1$, and we solve still $T = 0.5$. We fix $Nx = 81$ and refine $Nt = 2:32$. We same the data from a high fidelity (estimated error less than $10^{-14}$) result from the IF-RK4 method in Section \ref{sec:linear_adv} as the ``truth'' to calculate the error. Fig. \ref{fig:NSAdv_c_final_Taylor_3Gaussian} left shows the final tracer field for the solute with the finest time resolution, and the right shows the convergence result. We see that the final tracer field is similar to the ones we have seen in Section \ref{sec:linear_adv}, this is reassuring. And we see fourth order convergence once the timestep is small enough for the IF-RK4 velocity solver. We note here that a fourth order \sml\ nonlinear advection solver should remove this barrier. 
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/NSAdv_c_final_Taylor_3Gaussian}
+    \includegraphics{figs/NSAdv_conv_order_Taylor_3Gaussian}
+    \caption{}\label{fig:NSAdv_c_final_Taylor_3Gaussian}
+\end{figure}
 
+Now we solve the problem where the velocity is initialize with three vorticity \eqref{eq:3Gauss}, and the tracer has initial condition sinp \eqref{eq:sinp2}. 
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/NSAdv_c_final_3Vortices_sinp}
+    \includegraphics{figs/NSAdv_conv_order_3Vortices_sinp}
+    \caption{}\label{fig:NSAdv_c_final_3Vortices_sinp}
+\end{figure}
 
 \newpage
 \bibliographystyle{alpha}
