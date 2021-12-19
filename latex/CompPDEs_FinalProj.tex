@@ -53,21 +53,21 @@ We explore using Semi-Lagrangian numerical methods to solve linear and nonlinear
 \section{Introduction}
 We want to solve the linear advection of a passive tracer, with the Partial Differential Equation (PDE):
 \begin{align}
-    \frac{\DD}{\DD t}c(\ve x(t),t) = \frac{\pe}{\pe t}c(\ve x,t)+\ve u(\ve x,t)\cdot\nabla c(\ve x,t) = 0\label{eq:linear_adv}
+    \frac{\DD}{\DD t}c(\ve X(t),t) = \frac{\pe}{\pe t}c(\ve x,t)+\ve u(\ve x,t)\cdot\nabla c(\ve x,t) = 0\label{eq:linear_adv}
 \end{align}
-where $c$ is the concentration of the passive tracer of interests, $\ve x(t)$ is the Lagrangian trajectories of a fluid parcel, and $\ve u$ is the velocity is the underlying flow. We have the relation between $\ve x(t)$ and $\ve u$ is the ODE
+where $c$ is the concentration of the passive tracer of interests, $\ve X(t)$ is the Lagrangian trajectories of a fluid parcel (capital $\ve X$ denotes a marker for a particular fluid parcel), and $\ve u$ is the velocity is the underlying flow. We have the relation between $\ve X(t)$ and $\ve u$ is the ODE
 \begin{align}
-    \frac{\de}{\de t}\ve x(t) = \ve u(\ve x,t).\label{eq:x_ODE}
+\frac{\de}{\de t}\ve X(t) = \ve u(\ve X(t),t).\label{eq:x_ODE}
 \end{align}
-\eqref{eq:linear_adv} says that for such a passive tracer without diffusion, the concentration $c$ is constant along the Lagrangian trajectory (i.e.: $\ve x(t)$). 
+\eqref{eq:linear_adv} says that for such a passive tracer without diffusion, the concentration $c$ is constant along the Lagrangian trajectory (i.e.: along $\ve X(t)$). 
 
 From this fact, one might design a Lagrangian approach of solving \eqref{eq:linear_adv}, where we solve the ODE \eqref{eq:x_ODE} for a set of particles in time. Then the advection field $c$ at final time $T$ can be obtained from the knowing the final position of the particles since 
-$$c(\ve x(0),0) = c(\ve x(T),T).$$
+$$c(\ve X(0),0) = c(\ve X(T),T).$$
 However, this approach degrades in accuracy in time since the initial will-spaced particles might evolve to irregular shapes and leaving big gaps where no information about $c$ is available. This problem is especially dire for compressible flows. 
 
 \sml\;combines the Eulerian approach and the Lagrangian approach. In a nutshell, at each timestep we know $c$ at time $t$ on a regular \textit{Eulerian} grid $\ve x_i$ and we want to we calculate the information about $c$ at $t+\Delta t$ on the same regular \textit{Eulerian} grid. To do this, we use
-$$c(\ve x_i,t+\Delta t) = c(\hat{\ve x}_i,t)$$
-where $\hat{\ve x}_i$ is the departure point for $\ve x_i$ such that a \textit{Lagrangian} fluid trajectory goes through $\hat{\ve x}_i$ (resp. ${\ve x}_i$) at time $t$ (resp. $t+\Delta t$). The Lagrangian treatment of advection in each timestep allows for bigger time steps to be taken, and we still maintain the grid structure in Eulerian space. 
+$$c(\ve X_i,t+\Delta t) = c(\hat{\ve X}_i,t)$$
+where $\hat{\ve X}_i$ is the departure point for the fluid parcel marked at $\ve X_i$ such that a \textit{Lagrangian} fluid trajectory goes through $\hat{\ve x}_i$ (resp. ${\ve x}_i$) at time $t$ (resp. $t+\Delta t$). The Lagrangian treatment of advection in each timestep allows for bigger time steps to be taken, and we still maintain the grid structure in Eulerian space. 
 
 In general $\hat{\ve x}_i$ will not be on a grid point, therefore we need to interpolate to obtain an estimate. And except in trivial flows, we do not know the departure point $\hat{\ve x}_i$ exactly, and we need to numerically solve for an approximation. The main question to answer for \sml\;numerical method is how do we calculate the departure points $\hat{\ve{x}}_i$ and do the interpolation, and what are their properties. 
 For the rest of the report we will explore several time integrating and space interpolation schemes of various order. We will use them to solve the linear advection problem \eqref{eq:linear_adv}, but also nonlinear advection problem like the 2D inviscid and incompressible Navier-Stokes equation \eqref{eq:2d_Nav}. The report will be organized as such: in Section \ref{sec:interp1D} we will test many interpolation schemes by using them to solve the 1D linear advection scheme with constant velocity. Section \ref{sec:linear_adv} contains the test of \sml\;Method on 2D linear advection problem (with constant and variable velocity field). !!!
@@ -81,7 +81,7 @@ This is because this problem is enough to show the properties of various interpo
 
 We set the domain to be $[0,1)$ periodic, and solve for $t\in [0,1]$. $u = 1$ constant so that at $T = 1$, the tracer should be advection around the domain to its original position. This provide us with a test of accuracy of the solution. Since $u$ is constant, we know the departure points a priori thus interpolation is the only source of errors. There is no error in time, we fix the timestep constant as 7 (this is an odd number, and $Nx$ is always even, to ensure that we are not landing on a grid point). To investigate the order of convergence for the interpolation method, we vary the spacial resolution ($Nx = 8:1024$). Note that our CFL number is larger than one and reaching about 150 when the spatial resolution is the most dense. This corroborate the fact that the \sml\;method is unconditionally stable. We solve the problem with a power of trigonometric function initial condition:
 \begin{align*}
-    c(x,0) &= [\sin(\pi*x)]^p \hspace{1cm}\text{with }p = 40.
+    c(x,0) &= [\sin(\pi x)]^p \hspace{1cm}\text{with }p = 40.
 \end{align*}
 
 We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function as well as spectral interpolation method based on FINUFFT \cite{finufft_1,finufft_2}. (We do not use Lagrange polynomial interpolation mostly since I could not find a good implementation in MATLAB available.\footnote{In my search, I saw claims that there is a reason why (quadratic and cubic) Lagrange polynomial is not implemented in MATLAB, and it is because it is a bad idea. But I could not figure out why it is a bad idea. I don't think it is because of the Runge's phenomenon since it is only application when the polynomial order is higher than 3.}) We start with \texttt{linear}, which is Lagrange linear interpolation. Fig. \ref{fig:1D_cons_linear_} shows the result: the left is comparison of the numerical solutions to the truth, and the right is the plot for order of convergence. We see that the error is mainly diffusive, and the order of the interpolation is second. For constant velocity, \sml\;method is equivalent to the upwind method when the CFL number is less then one. Therefore it is reassuring to see that the nature of the error is the same (diffusive).
@@ -162,11 +162,11 @@ Wrapping up this section, we have experimentally investigated the nature of the 
 
 
 \section{Semi-Lagrangian Method for 2D Linear Advection}\label{sec:linear_adv}
-We verify the lesson we learn from Section \ref{sec:interp1D} in 2D. We solve again the constant velocity advection problem with $[0,1)\times [0,1)$ with $\ve u = (1,1)$. We again solve to $T = 1$ and compare the solution to the initial condition. We use a 2D trigonometric polynomial as initial condition:
+We verify the lesson we learn from Section \ref{sec:interp1D} in 2D. We solve again the constant velocity advection problem with $[0,1)\times [0,1)$ with $\ve u = (1,1)$. We solve to $T = 2$ and compare the solution to the initial condition. We use a 2D trigonometric polynomial as initial condition:
 \begin{align*}
-    c(x,y,0) &= [\sin(\pi*x)\sin(\pi*y)]^p \hspace{1cm}\text{with }p = 2.
+    c(x,y,0) &= [\sin(\pi x)\sin(\pi y)]^p \hspace{1cm}\text{with }p = 2.
 \end{align*}
-We show the resultant convergence order estimate in Fig. \ref{fig:2D_const_adv_all_interp}
+We use $Nt = 15$ and $Nx = Ny = 8:256$ (CLF number = $1.2:34$). We show the resultant convergence order estimate in Fig. \ref{fig:2D_const_adv_all_interp}. We see that the order of convergence for \texttt{linear}, \texttt{cubic}, and \texttt{spline} are the same with the result in Section \ref{sec:interp1D}. And FINUFFT is accurate for all spatial resolution since our initial condition only needs a few Fourier mode to be represented accurately. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/2D_const_adv_all_interp}
@@ -174,10 +174,47 @@ We show the resultant convergence order estimate in Fig. \ref{fig:2D_const_adv_a
     \caption{}\label{fig:2D_const_adv_all_interp}
 \end{figure}
 
+Now we are familiar with the interpolation step of \sml\;methods, we deal with the time integration step. We first focus on solving the linear advection problem where we assume the velocity $\ve u$ is known at all time on the spatial grid. In particular, for the timestep from $t^n$ to $t^{n+1/2}$, we know for all $x_i$ on the spatial grid:
+\begin{align*}
+    \ve u_i^{n} &= \ve u(\ve x_i,t^n);\\
+    \ve u_i^{n+1/2} &= \ve u(\ve x_i,t^{+1/2});\\
+    \ve u_i^{n+1} &= \ve u(\ve x_i,t^{n+1}).
+\end{align*}
+With these information, and the ``initial'' condition that $\ve X(t^{n+1}) = \ve x_i$ a grid point, we need to solve the ODE \eqref{eq:x_ODE} backward in time to obtain $\hat{\ve x}_i = \ve X(t^{n})$. The first method is to use a (backward) Euler step:
+\begin{align*}
+    \frac{\hat{\ve x}_i-\ve X(t^{n})}{\Delta t} = \frac{\ve X(t^{n+1})-\ve X(t^{n})}{\Delta t} = \ve u(\ve X(t^{n+1}),t^{n+1}) = \ve u(\ve x_i,t^{n+1}).
+\end{align*}
+The error in the departure point estimate $\hat{\ve x}^{(1)}_i$ is $\norm{\hat{\ve x}^{(1)}_i-\hat{\ve x}_i} = O(\Delta t^2)$ (cf. local truncation error for backward Euler). To match the time error, a second order linear interpolation of $c$ onto $\hat{\ve x}_i$ would suffice. Together the space-time local truncation error $O(\Delta t^2+\Delta x^2)$. Indeed, name the interpolated tracer to be $\overline{c}$, we have by triangular inequality
+\begin{align*}
+    \norm{\overline{c}(\hat{\ve x}^{(1)}_i)-c(\hat{\ve x}_i)} &\leq \norm{\overline{c}(\hat{\ve x}^{(1)}_i)-\overline{c}(\hat{\ve x}_i)}+\norm{\overline{c}(\hat{\ve x}_i)-c(\hat{\ve x}_i)}\\
+    &\leq \text{Const}\cdot \norm{\hat{\ve x}^{(1)}_i-\hat{\ve x}_i}+O(\Delta t^2) = O(\Delta x^2+\Delta t^2).
+\end{align*}
+Now global error of this method is one plus the local truncation error, thus we have a first order accurate method. 
 
-Introduction to the Euler scheme
+We test the order of convergence on a sample problem. We use the inviscid Taylor vortex as our underlying velocity ($v_0 = 1, L = 2\pi$):
+\begin{align*}
+    u &= v_0-\cos\left(\frac{2\pi(x-v_0t)}{L}\right)\sin\left(\frac{2\pi(y-v_0t)}{L}\right)\\
+    v &= v_0+\sin\left(\frac{2\pi(x-v_0t)}{L}\right)\cos\left(\frac{2\pi(y-v_0t)}{L}\right).
+\end{align*}
+And the initial tracer distribution is the three Gaussian peaks:
+\begin{align*}
+    c(x,y,0) =& \exp\left( -5\left((x-\pi)^2+(y-3\pi/4)^2\right) \right)+\exp\left( -5\left((x-\pi)^2+(y-5\pi/4)^2\right) \right)\\
+    &-\frac{1}{2}\exp\left( -\frac{5}{2}\left((x-5\pi/4)^2+(y-5\pi/4)^2\right) \right).
+\end{align*}
+We solve the problem numerically till $T = 0.5$ and empirically estimate the error. We can also compare the solution to the ``truth'' solution obtained by using the Pseudospectral IF-RK4 method from HW3. The convergence order plots look the same and we will only show the empirical estimates. First, Fig. \ref{fig:c_init_IF} shows the initial distribution of the tracer and a ``truth'' solution from Pseudospectral IF-RK4:
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/c_init_IF-RK4PS}
+    \includegraphics{figs/c_final_IF-RK4PS}
+    \caption{}\label{fig:c_init_IF}
+\end{figure}
 
-
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/2D_const_adv_all_interp}
+    \includegraphics{figs/2D_const_adv_finufft}
+    \caption{}\label{fig:}
+\end{figure}
 
 
 \section{Semi-Lagrangian Method for 2D Navier Stokes}\label{sec:nonli_adv}
