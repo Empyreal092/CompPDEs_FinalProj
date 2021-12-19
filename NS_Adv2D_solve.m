@@ -1,8 +1,8 @@
 clear all
 close all
 addpath(genpath('Tools'))
-addpath(genpath('NSStep'))
-addpath(genpath('AdvStep'))
+addpath(genpath('NS_step'))
+addpath(genpath('Adv_step'))
 addpath(genpath('IC_n_Vel_Data'))
 
 global L v0 Nx Ny dt ext_sz finufft_interp
