@@ -13,10 +13,13 @@ else
     [um,vm] = omega_2_uv(omega_temp_prev);
     [um2,vm2] = omega_2_uv(omega_temp_prev2);
     [um3,vm3] = omega_2_uv(omega_temp_prev3);
-    
+
     if extrap_4th
         uh = 1/16*(35*un-35*um+21*um2-5*um3); vh = 1/16*(35*vn-35*vm+21*vm2-5*vm3);
         up = (4*un-6*um+4*um2-um3);     vp = (4*vn-6*vm+4*vm2-vm3);
+%         [omega_extrap,~,~] = MCD86_step_NS(omega_temp,omega_temp_prev,omega_temp_prev2,x_mesh,y_mesh,x_mesh_extend,y_mesh_extend);
+%         [up,vp] = omega_2_uv(omega_extrap);
+%         uh = 1/16*(5*up+15*un-5*um+1*um2); vh = 1/16*(5*vp+15*vn-5*vm+1*vm2);
     else
         uh = 1/8*(15*un-10*um+3*um2); vh = 1/8*(15*vn-10*vm+3*vm2);
         up = (3*un-3*um+um2);     vp = (3*vn-3*vm+vm2);

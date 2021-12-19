@@ -13,8 +13,8 @@ IC_type = "3Vortices"; N_resolve = 33;
 %%
 % time_step_method = "Euler";
 % time_step_method = "Trap";
-time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
-% time_step_method = "RK4SL"; extrap_4th = false;
+% time_step_method = "MCD86"; % Fletcher p.218; McDonald, A. 1987
+time_step_method = "RK4SL"; extrap_4th = false;
 % time_step_method = "IF-RK4PS";
 
 initialize_w_realdata = false;
@@ -129,14 +129,8 @@ for N = N_ary
     if time_step_method == "Trap"
         omega_temp_prev = NaN;
     elseif time_step_method == "MCD86"
-        if initialize_w_realdata
-            [~,~,omega_temp_prev] = vel_taylor(x_mesh,y_mesh,-dt);
-%             [~,~,omega_temp_prev2] = vel_taylor(x_mesh,y_mesh,-2*dt);
-        else
-            omega_temp_prev = NaN;
-        end
+        omega_temp_prev = NaN;
         omega_temp_prev2 = NaN;
-
     elseif time_step_method == "RK4SL"
         if initialize_w_realdata
             [~,~,omega_temp_prev] = vel_taylor(x_mesh,y_mesh,-dt);
