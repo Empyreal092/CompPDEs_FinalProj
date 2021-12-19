@@ -8,11 +8,11 @@ addpath(genpath('IC_n_Vel_Data'))
 global L v0 Nx Ny dt ext_sz finufft_interp
 
 %%
-% vel_type = "Taylor";
-vel_type = "3Vortices";
+vel_type = "Taylor";
+IC_type = "3Gaussian"; N_resolve = 81;
 
-IC_type = "sinp"; p = 2; N_resolve = 49;
-% IC_type = "3Gaussian"; N_resolve = 81;
+% vel_type = "3Vortices";
+% IC_type = "sinp"; p = 2; N_resolve = 49;
 
 %%
 NS_time_step_method = "IF-RK4PS";
@@ -29,13 +29,17 @@ adv_CFL_num = 2;
 %%
 plot_timestep_numr = false;
 
-if_test_converg_order_truth = false;
-if_test_converg_order_empiri = true;
-
 % some automatic options
-fix_timesteps_num = false;
-fix_spacegrid_num = true;
+if vel_type == "Taylor" && IC_type == "3Gaussian"
+    if_test_converg_order_truth = true;
+    if_test_converg_order_empiri = false;
+else
+    if_test_converg_order_truth = false;
+    if_test_converg_order_empiri = true;
+end
 
+fix_timesteps_num = false;
+    fix_spacegrid_num = true;
 %%
 switch IC_type
     case "sinp"
@@ -58,7 +62,8 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
     error_ary_mat_trac = [];
     error_ary_mat_vel =  [];
     
-    N_pow = [0:3];
+    N_pow = [1:5];
+%     N_pow = [3:7];
     N_ary = round(2.^N_pow);
     
     if if_test_converg_order_truth
@@ -80,7 +85,8 @@ for N = N_ary
     if fix_spacegrid_num
         Nx = N_resolve; Ny = Nx;
     end
-    Nt = round( ((Nx/adv_CFL_num)*(T/L)*v0*N)/2 )*2;
+%     Nt = round( ((Nx/adv_CFL_num)*(T/L)*v0*N)/2 )*2;
+    Nt = N;
     dt = T/Nt;
     disp("Nx = "+Nx+"; Nt = "+Nt+"; CFL_Num: "+v0*Nx/Nt*(T/L));
     
@@ -168,13 +174,6 @@ end
 if if_test_converg_order_truth || if_test_converg_order_empiri
     figure(100)
     
-    loglog(plot_input_ary,error_ary_mat_trac(1,:),'bo','DisplayName','$c,\ell^1$'); hold on
-    loglog(plot_input_ary,error_ary_mat_trac(2,:),'b^','DisplayName','$c,\ell^2$')
-    loglog(plot_input_ary,error_ary_mat_trac(3,:),'bs','DisplayName','$c$, uniform')
-    loglog(plot_input_ary,error_ary_mat_vel(1,:),'ro','DisplayName','$\omega,\ell^1$')
-    loglog(plot_input_ary,error_ary_mat_vel(2,:),'r^','DisplayName','$\omega,\ell^2$')
-    loglog(plot_input_ary,error_ary_mat_vel(3,:),'rs','DisplayName','$\omega$, uniform')
-    
     switch adv_time_step_method
         case "Euler"
             loglog_ordofconv(plot_input_ary,error_ary_mat_trac,1)
@@ -186,16 +185,42 @@ if if_test_converg_order_truth || if_test_converg_order_empiri
             loglog_ordofconv(plot_input_ary,error_ary_mat_trac,4)
     end
     
+    loglog(plot_input_ary,error_ary_mat_trac(1,:),'bo','DisplayName','$c,\ell^1$'); hold on
+    loglog(plot_input_ary,error_ary_mat_trac(2,:),'b^','DisplayName','$c,\ell^2$')
+    loglog(plot_input_ary,error_ary_mat_trac(3,:),'bs','DisplayName','$c$, uniform')
+    loglog(plot_input_ary,error_ary_mat_vel(1,:),'ro','DisplayName','$\omega,\ell^1$')
+    loglog(plot_input_ary,error_ary_mat_vel(2,:),'r^','DisplayName','$\omega,\ell^2$')
+    loglog(plot_input_ary,error_ary_mat_vel(3,:),'rs','DisplayName','$\omega$, uniform')
+    
     xlim([plot_input_ary(end) plot_input_ary(1)])
     
-    ylabel('error'), xlabel('$\Delta x$')
-    switch vel_type
-        case "Constant"
-            %             title([vel_type+" Vel; "+"IC: "+IC_type])
-    end
+    ylabel('error'), xlabel('$\Delta t$')
+    title(["Vel+TracIC: "+vel_type+"+"+IC_type,"IF-RK4+RK4SL; $Nx=$"+Nx])
     
-    pplot(8,0.8,8)
-    legend('Location','best','NumColumns',1)
+    pplot(8,0.85,8)
+    legend('Location','best','NumColumns',2)
     hold off
 end
 
+%%
+figure(101)
+pplot(8,0.78,8)
+heatmap2d(IC_tracer_real,x_mesh,y_mesh); hold on
+title("Initial Tracer Distrib $c(x,0)$")
+xlabel("$x$"); ylabel("$y$")
+pplot(8,0.78,8)
+
+figure(102)
+pplot(8,0.78,8)
+heatmap2d(tracer_final,x_mesh,y_mesh); hold on
+title("Final Tracer Distrib $c(x,T)$")
+xlabel("$x$"); ylabel("$y$")
+pplot(8,0.78,8)
+
+%%
+figure(100)
+savefig("latex/figs/"+"NSAdv_conv_order_"+vel_type+"_"+IC_type)
+figure(101)
+savefig("latex/figs/"+"NSAdv_c_init_"+vel_type+"_"+IC_type)
+figure(102)
+savefig("latex/figs/"+"NSAdv_c_final_"+vel_type+"_"+IC_type)
