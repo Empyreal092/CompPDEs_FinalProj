@@ -84,7 +84,7 @@ We set the domain to be $[0,1)$ periodic, and solve for $t\in [0,1]$. $u = 1$ co
     c(x,0) &= [\sin(\pi x)]^p \hspace{1cm}\text{with }p = 40.
 \end{align*}
 
-We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function as well as spectral interpolation method based on FINUFFT \cite{finufft_1,finufft_2}. Note that for MATLAB's \texttt{interp1} function, we feed it padded data where we extend the function on the left and right by five points using periodicity. For all query point, we mod it to make sure that it says within $[0,L)$. (We do not use Lagrange polynomial interpolation mostly since I could not find a good implementation in MATLAB available.\footnote{In my search, I saw claims that there is a reason why (quadratic and cubic) Lagrange polynomial is not implemented in MATLAB, and it is because it is a bad idea. But I could not figure out why it is a bad idea. I don't think it is because of the Runge's phenomenon since it is only application when the polynomial order is higher than 3.}) We start with \texttt{linear}, which is Lagrange linear interpolation. Fig. \ref{fig:1D_cons_linear_} shows the result: the left is comparison of the numerical solutions to the truth, and the right is the plot for order of convergence. We see that the error is mainly diffusive, and the order of the interpolation is second. For constant velocity, \sml\;method is equivalent to the upwind method when the CFL number is less then one. Therefore it is reassuring to see that the nature of the error is the same (diffusive).
+We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function as well as spectral interpolation method based on Flatiron Institute Nonuniform Fast Fourier Transform (FINUFFT) \cite{finufft_1,finufft_2}. Note that for MATLAB's \texttt{interp1} function, we feed it padded data where we extend the function on the left and right by five points using periodicity. For all query point, we mod it to make sure that it says within $[0,L)$. (We do not use Lagrange polynomial interpolation mostly since I could not find a good implementation in MATLAB available.\footnote{In my search, I saw claims that there is a reason why (quadratic and cubic) Lagrange polynomial is not implemented in MATLAB, and it is because it is a bad idea. But I could not figure out why it is a bad idea. I don't think it is because of the Runge's phenomenon since it is only application when the polynomial order is higher than 3.}) We start with \texttt{linear}, which is Lagrange linear interpolation. Fig. \ref{fig:1D_cons_linear_} shows the result: the left is comparison of the numerical solutions to the truth, and the right is the plot for order of convergence. We see that the error is mainly diffusive, and the order of the interpolation is second. For constant velocity, \sml\;method is equivalent to the upwind method when the CFL number is less then one. Therefore it is reassuring to see that the nature of the error is the same (diffusive).
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_cons_linear_sol}
@@ -291,9 +291,9 @@ Now that the departure point is solve to fifth order locally, we need a fifth or
     \includegraphics{figs/conv_order_RK4SL}
     \caption{}\label{fig:c_final_RK4SL}
 \end{figure}
-It is curious why \sml\ method literature does not use RK method to solve for the departure point. We check the cost by counting the number of interpolations and their requires order. We compare RK3, which should be third order, with MCD86: RK3 needs three third and a forth order interpolation, while MCD86 needs two second, two third, and two forth order interpolation. It seems MCD86 is more expensive. We comment that the second and third RK4 step looks like a fixed point solver, and it might be that the RK4 method and classic \sml\ methods are more similar than the form suggests.
+It is curious why \sml\ method literature does not use RK method to solve for the departure point. We check the cost by counting the number of interpolations and their requires order. We compare RK3, which should be third order, with MCD86: RK3 needs three third and a forth order interpolation, while MCD86 needs two second, two third, and two forth order interpolation. It seems MCD86 is more expensive. We comment that the second and third RK4 step looks like a fixed point solver, and it might be that the RK4 method and classic \sml\ methods are more similar than the form suggests. We will continue the discussion in Section \ref{sec:nonli_adv} where the issue is a bit more nuanced. 
 
-We could replace all the interpolation with FINUFFT so that they are spectrally accurate. We give a large enough $Nx = Ny$ so that there is no spatial error (for 3 Gaussian, $Nx = Ny = 81$). Then we can fix the spatial resolution and improve accuracy by only refining the timestep. This is a good way to isolate the error produced by the timestepping. But this is also viable numerical method. In a sense, the method is pseudospectral but with with \sml\ timestepping. This has real advantage compared to the regular pseudospectral method for advection in that it could take a lot bigger a timestep while still being stable. For example, to solve the problem above, \sml\ Pseudospectral method is stable for CFL number up to 3 while the regular IF-RK4 Pseudospectral method is only stable when CFL number is less than 0.5. Fig. \ref{fig:conv_order_finu_} shows the convergence order result for \sml\ Pseudospectral and IF-RK4 Pseudospectral method. We see that all the convergence order of \sml\ method stay the same. In particular, the error for the most accurate result for RK4SL Pseudospectral method is $O(10^{-9})$, very small! And that is achieved with 54 timestep (i.e.: $\Delta t = 0.0093$). IF-RK4 Pseudospectral method does not each the same level of accuracy with same number of timestep (the $x$-axis of the IF-RK4 figure is large than the rest).
+We could replace all the interpolation with FINUFFT so that they are spectrally accurate. We give a large enough $Nx = Ny$ so that there is no spatial error (for 3 Gaussian, $Nx = Ny = 81$). Then we can fix the spatial resolution and improve accuracy by only refining the timestep. This is a good way to isolate the error produced by the timestepping. But this is also viable numerical method. In a sense, the method is pseudospectral but with with \sml\ timestepping. This has real advantage compared to the regular pseudospectral method for advection in that it could take a lot bigger a timestep while still being stable. For example, to solve the problem above, \sml\ Pseudospectral method is stable for CFL number up to 3 while the regular IF-RK4 Pseudospectral method is only stable when CFL number is less than 0.5. Fig. \ref{fig:conv_order_finu_} shows the convergence order result for \sml\ Pseudospectral and IF-RK4 Pseudospectral method. We see that all the convergence order of \sml\ method stay the same. In particular, the error for the most accurate result for RK4SL Pseudospectral method is $O(10^{-9})$, very small! And that is achieved with 54 timestep (i.e.: $\Delta t = 0.0093$). IF-RK4 Pseudospectral method does not each the same level of accuracy with same number of timestep (the $x$-axis of the IF-RK4 figure is large than the rest). To truly compare the two methods, we also need to know the cost per timestep. Assuming that FINUFFT cost as much as a standard uniform Fast Fourier Transform (FFT), we approximate the cost by counting the number of \texttt{fft/ifft} pairs per timestep. For IF-RK4, assume that the velocity is given in Fourier space and we solve for the tracer in Fourier space, we only need four pairs of \texttt{fft/ifft} per timestep. The \sml RK4  Pseudospectral method needs four $u,v$ interpolation and one tracer field interpolation, and that is $4\times 2+1 = 9$ \texttt{fft/ifft} pairs. Therefore we could say \sml RK4 w/ FINUFFT is as expensive as two IF-RK4 method. But compare the stability and accuracy of the two methods shown in Fig. \ref{fig:conv_order_finu_}, we see that IF-RK4 needs more than two times the timestep to reach the same accuracy. Therefore we conclude that \sml RK4 w/ FINUFFT is cheaper as a solver for linear advection.
 \begin{figure}[H]
     \centering
     \includegraphics{figs/conv_order_finu_Euler}
@@ -340,7 +340,7 @@ Now for the trapezoidal method, we need an estimate of the velocity at $t^{n+1}$
 \begin{align*}
     \ve u(t^{n+1}) = 2\ve u(t^n)-\ve u(t^{n-1}). 
 \end{align*}
-Then we have $\ve u$ available on the grid at time $t^{n+1}$, and we can proceed as we have stated in Section \ref{sec:linear_adv}. Fig. \ref{fig:nonlin_conv_order_Taylor_Trap} shows convincing second order convergence. 
+Then we have $\ve u$ available on the grid at time $t^{n+1}$. But now we need the information for the velocity at $t^{n-1}$, so for the first step, we call the Euler method instead. Now we can proceed as we have stated in Section \ref{sec:linear_adv}. Fig. \ref{fig:nonlin_conv_order_Taylor_Trap} shows convincing second order convergence. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/nonlin_conv_order_Taylor_Trap}
@@ -349,11 +349,11 @@ Then we have $\ve u$ available on the grid at time $t^{n+1}$, and we can proceed
     \includegraphics{figs/nonlin_conv_order_3Vortices_finu_Trap}
     \caption{}\label{fig:nonlin_conv_order_Taylor_Trap}
 \end{figure}
-The MCD86 method need the estimate of the velocity at the half timestep $t^{n+1/2}$. Since we want global third order accuracy, the order of the extrapolation needs to be improved as well compared to one used in the trapezoidal method. For this \cite{mcdonald1987} uses an extrapolation stated in \cite{temperton1987}, but this is just the standard polynomial extrapolation
+The MCD86 method need the estimate of the velocity at the half timestep $t^{n+1/2}$. Since we want global third order accuracy, the order of the extrapolation needs to be improved as well compared to one used in the trapezoidal method. For this \cite[(19)]{mcdonald1987} uses an extrapolation stated in \cite{temperton1987}, but this is just the standard polynomial extrapolation
 \begin{align*}
     \ve u(t^{n+1/2}) = \frac{1}{8}\left(15\ve u(t^n)-10\ve u(t^{n-1})+3\ve u(t^{n-2})\right). 
 \end{align*}
-With this estimate, we could proceed with the method as stated in Section \ref{sec:linear_adv}. Fig. \ref{fig:nonlin_conv_order_Taylor_MCD86} shows good third order convergence result.
+For the first two steps where we do not have the velocity information at $t^{n-1}$ and $t^{n-2}$, we call the trapezoidal method. With this estimate, we could proceed with the method as stated in Section \ref{sec:linear_adv}. Fig. \ref{fig:nonlin_conv_order_Taylor_MCD86} shows good third order convergence result.
 \begin{figure}[H]
     \centering
     \includegraphics{figs/nonlin_conv_order_Taylor_MCD86}
@@ -362,8 +362,28 @@ With this estimate, we could proceed with the method as stated in Section \ref{s
     \includegraphics{figs/nonlin_conv_order_3Vortices_finu_MCD86}
     \caption{}\label{fig:nonlin_conv_order_Taylor_MCD86}
 \end{figure}
+The story for RK4 method is less straightforward. We could not reach fourth order convergence. This is because a fourth order extrapolation using the information at $t^n$ to $t^{n-3}$ does not appear to be stable, in the sense that with that extrapolation for $\ve u(t^{n+1/2}),\ve u(t^{n+1})$, the solution does not converge. So instead we use the same third order extrapolation as the one used in MCD86 method:
+\begin{align*}
+    \ve u(t^{n+1/2}) &= \frac{1}{8}\left(15\ve u(t^n)-10\ve u(t^{n-1})+3\ve u(t^{n-2})\right);\\
+    \ve u(t^{n+1}) &= 3\ve u(t^n)-3\ve u(t^{n-1})+\ve u(t^{n-2}).
+\end{align*}
+Initialize the first few steps with MCD86, we can proceed with the description of RK4 from Section \ref{sec:linear_adv}. But the result is only third order as shown in Fig. \ref{fig:nonlin_conv_order_Taylor_RK4SL}.
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/nonlin_conv_order_Taylor_RK4SL}
+    \includegraphics{figs/nonlin_conv_order_Taylor_finu_RK4SL}
+    \includegraphics{figs/nonlin_conv_order_3Vortices_RK4SL}
+    \includegraphics{figs/nonlin_conv_order_3Vortices_finu_RK4SL}
+    \caption{}\label{fig:nonlin_conv_order_Taylor_RK4SL}
+\end{figure}
+We continue the discussion of using RK method in \sml setting. The above result is an discouragement, but we still argue that RK3 is an strong alternative to MCD86. Only needing third order extrapolation, RK3 could reach third order convergence as RK4 above. And we have determined that RK3 is cheaper then MCD86 per timestep.
+
+In general, for nonlinear advection problem, extrapolation to get an estimate of the velocity field seems sketchy to me even when it seems that it works for low order extrapolation with moderate timestep (but still CFL number larger than one). And it is not a good idea to push the order higher, as shown in the RK4 example. I am interested in if there is an alternative high (larger than three) order \sml\ method that does not use polynomial extrapolation. 
 
 \section{Semi-Lagrangian Method for 2D Linear Advection, Cont.}\label{sec:adv_NS}
+We finish the note by solving linear advection problems where the velocity is obtained numerically. Given the disappointing result of \sml\ method when applied to nonlinear advection, we choose to stick with IF-RK4 method to solve the velocity. But for advection of the tracer, we use \sml RK4 w/ FINUFFT to solve. This work well with the pseudospectral IF-RK4 since we can keep space resolution fixed while improve the accuracy by refining time. 
+
+First we solve the problem we solve in Section \ref{sec:linear_adv} but now the velocity numerically solved. We initialize the $\omega$ field with the Taylor vortices \eqref{eq:taylor} and the tracer field as three Gaussians \eqref{eq:3Gauss}. We again have $L = 2\pi, v_0 = 1$, and we solve still $T = 0.5$. 
 
 
 \newpage
