@@ -150,12 +150,12 @@ In comparison \texttt{pchip} and \texttt{makima} does not have such issue, as sh
     \includegraphics{figs/1D_step_cons_makima_sol}
     \caption{}\label{fig:1D_step_cons_pchip_sol}
 \end{figure}
-Finallt, we show the result from FINUFFT in Fig. \ref{1D_step_cons_finufft_sol}. There is oscillation at the smallest scale of the resolution. This is likely due to the fact that for a discontinuous function, the Fourier coefficient decays very slowly. This fact is also represented in the error graph, now in \texttt{loglog} form, we can see that the error only converges in first order. 
+Finally, we show the result from FINUFFT in Fig. \ref{fig:1D_step_cons_finufft_sol}. There is oscillation at the smallest scale of the resolution. This is likely due to the fact that for a discontinuous function, the Fourier coefficient decays very slowly. This fact is also represented in the error graph, now in \texttt{loglog} form, we can see that the error only converges in first order. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_step_cons_finufft_sol}
     \includegraphics{figs/1D_step_cons_finufft_convord}
-    \caption{}\label{fig:1D_step_cons_finufft_}
+    \caption{}\label{fig:1D_step_cons_finufft_sol}
 \end{figure}
 
 Wrapping up this section, we have experimentally investigated the nature of the error and the order of convergence of various interpolation methods implemented in MATLAB's \texttt{interp1} function as well as a spectral interpolation method. We will use \texttt{linear}, \texttt{cubic}, \texttt{spline}, and FINUFFT for the future sections. We will not use \texttt{pchip} and \texttt{makima} since they are only significantly different when the solution is discontinuous, but all our future example will be continuous. Also, they will make the order of convergence study of the full \sml\;scheme more confusing. But they should be considered when we run into future problems when there is discontinues in the solutions. 
@@ -192,15 +192,15 @@ The error in the departure point estimate $\hat{\ve x}^{(1)}_i$ is $\norm{\hat{\
 Now global error of this method is one less than the local truncation error, thus we have a first order space-time accurate method. 
 
 We test the order of convergence on a sample problem. We use the inviscid Taylor vortex as our underlying velocity ($v_0 = 1, L = 2\pi$):
-\begin{align*}
-    u &= v_0-\cos\left(\frac{2\pi(x-v_0t)}{L}\right)\sin\left(\frac{2\pi(y-v_0t)}{L}\right)\\
-    v &= v_0+\sin\left(\frac{2\pi(x-v_0t)}{L}\right)\cos\left(\frac{2\pi(y-v_0t)}{L}\right).
-\end{align*}
+\begin{align}
+    u &= v_0-\cos\left(\frac{2\pi(x-v_0t)}{L}\right)\sin\left(\frac{2\pi(y-v_0t)}{L}\right)\nonumber\\
+    v &= v_0+\sin\left(\frac{2\pi(x-v_0t)}{L}\right)\cos\left(\frac{2\pi(y-v_0t)}{L}\right).\label{eq:taylor}
+\end{align}
 And the initial tracer distribution is the three Gaussian peaks:
-\begin{align*}
-    c(x,y,0) =& \exp\left( -5\left((x-\pi)^2+(y-3\pi/4)^2\right) \right)+\exp\left( -5\left((x-\pi)^2+(y-5\pi/4)^2\right) \right)\\
-    &-\frac{1}{2}\exp\left( -\frac{5}{2}\left((x-5\pi/4)^2+(y-5\pi/4)^2\right) \right).
-\end{align*}
+\begin{align}
+    c(x,y,0) =& \exp\left( -5\left((x-\pi)^2+(y-3\pi/4)^2\right) \right)+\exp\left( -5\left((x-\pi)^2+(y-5\pi/4)^2\right) \right)\nonumber\\
+    &-\frac{1}{2}\exp\left( -\frac{5}{2}\left((x-5\pi/4)^2+(y-5\pi/4)^2\right) \right).\label{eq:3Gauss}
+\end{align}
 We solve the problem numerically till $T = 0.5$ and empirically estimate the error. We can also compare the solution to the ``truth'' solution obtained by using the Pseudospectral IF-RK4 method from HW3. The convergence order plots look the same and we will only show the empirical estimates. First, Fig. \ref{fig:c_init_IF} shows the initial distribution of the tracer and a ``truth'' solution from Pseudospectral IF-RK4:
 \begin{figure}[H]
     \centering
@@ -305,17 +305,65 @@ We could replace all the interpolation with FINUFFT so that they are spectrally 
 \end{figure}
 
 \section{Semi-Lagrangian Method for 2D Navier Stokes}\label{sec:nonli_adv}
+We use \sml\ methods to numerically solve the incompressible inviscid Navier-Stokes equation:
+\begin{align}
+    \begin{cases}
+    \pe_t\ve u+\ve u\cdot\nabla\ve u=-\nabla p\\
+    \nabla\cdot\ve u = 0.
+    \end{cases}\label{eq:2d_Nav}
+\end{align}
+This is possible because we could reformulate the equation in the vorticity-stream formulation, which is an advection equation with vorticity as the tracer. First, due to incompressibility, we could define the streamfunction $\psi$ and the vorticity $\omega$ ($u$ is the $x$-component of $\ve u$ and $v$ is the $y$-component of $\ve u$):
+\begin{align}
+    &-\pe_y \psi = u,\quad  \pe_x \psi = v;\nonumber\\
+    &\omega = -\pe_y u+\pe_x v = \nabla^2 \psi.\label{eq:relate_omega_psi}
+\end{align}
+Then the vorticity-stream formulation is:
+\begin{align}
+    &\pe_t\omega+\ve u\cdot\nabla\omega = 0\label{eq:vort_stream}\\
+    \fff&\pe_t\omega+J(\psi,\omega) = 0\nonumber
+\end{align}
+and this equation is closed since $\ve u,\psi$ can be solved from $\omega$ via \eqref{eq:relate_omega_psi}. This is a nonlinear advection problem since the velocity that advect tracer field needs to solved from the tracer field $\omega$. Therefore for each timestep we only know the velocity information at time $t^n$. 
 
+To test our \sml\ schemes, we use them to solve the D Navier-Stokes problem with two different initial condition. First, we initialize the $\omega$ field to be the one associated with the Taylor vortex \eqref{eq:taylor}. We use $L = 1$ and $v_0 = 1$ and solve till time $T = 0.25$. To obtain the error of the solver, we compare the error with the truth $\omega$ given by the formula. The second initial condition is the three Gaussian (now three vortices) given by \eqref{eq:3Gauss}. For this we use $L = 2\pi$ and $v_0 = 1$ and solve till time $T = 1.5$. We estimate the error empirically for this case. 
+
+Now we show the result for the \sml\ schemes. Fig. \ref{fig:nonlin_conv_order_Taylor_Euler} shows the result for Euler timestepping. For Euler, only velocity information at $t^n$ is needed and no change is needed from our previous description of the method. The first row are results for the Taylor initial condition while the second row is for the three vortices initialization. Left column is the classic \sml\ methods where we refine space and time together while keeping the CFL number about 1.5. The right column we use FINUFFT for the interpolation, thus we keep the space resolution constant ($Nx = Ny = 9$ for Taylor and $Nx = Ny = 33$ for three vortices) and refine only time. All four plots shows the expected first order convergence. 
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/nonlin_conv_order_Taylor_Euler}
+    \includegraphics{figs/nonlin_conv_order_Taylor_finu_Euler}
+    \includegraphics{figs/nonlin_conv_order_3Vortices_Euler}
+    \includegraphics{figs/nonlin_conv_order_3Vortices_finu_Euler}
+    \caption{}\label{fig:nonlin_conv_order_Taylor_Euler}
+\end{figure}
+
+Now for the trapezoidal method, we need an estimate of the velocity at $t^{n+1}$. To do this we extrapolate it from the velocity at $t^n$ and $t^{n-1}$ via
+\begin{align*}
+    \ve u(t^{n+1}) = 2\ve u(t^n)-\ve u(t^{n-1}). 
+\end{align*}
+Then we have $\ve u$ available on the grid at time $t^{n+1}$, and we can proceed as we have stated in Section \ref{sec:linear_adv}. Fig. \ref{fig:nonlin_conv_order_Taylor_Trap} shows convincing second order convergence. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/nonlin_conv_order_Taylor_Trap}
     \includegraphics{figs/nonlin_conv_order_Taylor_finu_Trap}
     \includegraphics{figs/nonlin_conv_order_3Vortices_Trap}
     \includegraphics{figs/nonlin_conv_order_3Vortices_finu_Trap}
-    \caption{}\label{fig:conv_order_finu_}
+    \caption{}\label{fig:nonlin_conv_order_Taylor_Trap}
+\end{figure}
+The MCD86 method need the estimate of the velocity at the half timestep $t^{n+1/2}$. Since we want global third order accuracy, the order of the extrapolation needs to be improved as well compared to one used in the trapezoidal method. For this \cite{mcdonald1987} uses an extrapolation stated in \cite{temperton1987}, but this is just the standard polynomial extrapolation
+\begin{align*}
+    \ve u(t^{n+1/2}) = \frac{1}{8}\left(15\ve u(t^n)-10\ve u(t^{n-1})+3\ve u(t^{n-2})\right). 
+\end{align*}
+With this estimate, we could proceed with the method as stated in Section \ref{sec:linear_adv}. Fig. \ref{fig:nonlin_conv_order_Taylor_MCD86} shows good third order convergence result.
+\begin{figure}[H]
+    \centering
+    \includegraphics{figs/nonlin_conv_order_Taylor_MCD86}
+    \includegraphics{figs/nonlin_conv_order_Taylor_finu_MCD86}
+    \includegraphics{figs/nonlin_conv_order_3Vortices_MCD86}
+    \includegraphics{figs/nonlin_conv_order_3Vortices_finu_MCD86}
+    \caption{}\label{fig:nonlin_conv_order_Taylor_MCD86}
 \end{figure}
 
-\section{Semi-Lagrangian Method for 2D Navier Stokes}\label{sec:adv_NS}
+\section{Semi-Lagrangian Method for 2D Linear Advection, Cont.}\label{sec:adv_NS}
 
 
 \newpage
