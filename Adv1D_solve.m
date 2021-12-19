@@ -176,8 +176,8 @@ end
 
 %%
 % file_nm = "1D_cons_"+interp_method;
-file_nm = "1D_step_cons_"+interp_method;
-figure(99)
-savefig("latex/figs/"+file_nm+"_sol")
-figure(100)
-savefig("latex/figs/"+file_nm+"_convord")
+% file_nm = "1D_step_cons_"+interp_method;
+% figure(99)
+% savefig("latex/figs/"+file_nm+"_sol")
+% figure(100)
+% savefig("latex/figs/"+file_nm+"_convord")
