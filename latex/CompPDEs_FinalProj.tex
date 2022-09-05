@@ -37,21 +37,25 @@
         {}% formatting commands applied just to subsection title
         []% punctuation or other commands following subsection title
 
-\author{Ryan Shijie Du}
+\author{Ryan Sh\`iji\'e D\`u}
 \date{\today}
 \title{{An Exploration of Semi-Lagrangian Methods for Advection}
-\\\vspace{0.3cm} \small Final Project for the Course: Computational Methods For Classical PDEs In The Physical Sciences}
+\\\vspace{0.3cm} \small Final Project for the Course: Computational Methods for Classical PDEs in the Physical Sciences}
 
 \begin{document}
 
 \newcommand{\sml}{\text{Semi-Lagrangian}}
 \maketitle
 \begin{abstract}
-We explore using Semi-Lagrangian numerical methods to solve linear and nonlinear advection problem. The main benefit of \sml\ methods is that they are stable for large timestep. In particular it is stable for timestep size where the Courant–Friedrichs–Lewy (CFL) number defined in the traditional finite difference sense is larger than one. But for a \sml\;scheme to be accurate, we need to solve for the departure points and then interpolate the advected field onto the departure points, both to high accuracy. We explore several \sml\;schemes and reach fourth order space-time accuracy for linear advection where the advection velocity is known a priori. And for nonlinear advection, where the velocity is obtained from the advected field, we have third order. We also explore spectral interpolation and reach the same order of accuracy but without the need for spacial resolution refinement. 
+We explore using Semi-Lagrangian numerical methods to solve linear and nonlinear advection problem. The main benefit of \sml\ methods is that they are stable for large timestep. In particular it is stable for timestep size where the Courant–Friedrichs–Lewy (CFL) number defined in the traditional finite difference sense is larger than one. But for a \sml\;scheme to be accurate, we need to solve for the departure points and then interpolate the advected field onto the departure points, both to high accuracy. We explore several \sml\;schemes and reach fourth order space-time accuracy for linear advection where the advection velocity is known a priori. And for nonlinear advection, where the velocity is obtained from the advected field, we have third order. We also explore spectral interpolation and reach the same order of accuracy but without the need for spatial resolution refinement. 
 \end{abstract}
 
+\setcounter{section}{-1}
+\section{About this version}
+This note is an updated version of the final project submission for the numerics class by Alex Donev in Fall of 2021. This version incorporates some comments by Alex Donev on the original submitted version. There is no major revisions and some mistakes were acknowledged but uncorrected. This note should act as a sample of final project for this class, instead of a polished note for the public.
+
 \section{Introduction}
-We want to solve the linear advection of a passive tracer, with the Partial Differential Equation (PDE):
+We want to solve the linear advection of a passive tracer. Assume $\nabla\cdot\ve u = 0$, we have the Partial Differential Equation (PDE):
 \begin{align}
     \frac{\DD}{\DD t}c(\ve X(t),t) = \frac{\pe}{\pe t}c(\ve x,t)+\ve u(\ve x,t)\cdot\nabla c(\ve x,t) = 0\label{eq:linear_adv}
 \end{align}
@@ -63,39 +67,39 @@ where $c$ is the concentration of the passive tracer of interests, $\ve X(t)$ is
 
 From this fact, one might design a Lagrangian approach of solving \eqref{eq:linear_adv}, where we solve the ODE \eqref{eq:x_ODE} for a set of particles in time. Then the advection field $c$ at final time $T$ can be obtained from the knowing the final position of the particles since 
 $$c(\ve X(0),0) = c(\ve X(T),T).$$
-However, this approach degrades in accuracy in time since the initial will-spaced particles might evolve to irregular shapes and leaving big gaps where no information about $c$ is available. This problem is especially dire for compressible flows. 
+However, this approach degrades in accuracy in time since the initial well-spaced particles might evolve to irregular shapes and leaving big gaps where no information about $c$ is available. 
 
 \sml\;combines the Eulerian approach and the Lagrangian approach. In a nutshell, at each timestep we know $c$ at time $t$ on a regular \textit{Eulerian} grid $\ve x_i$ and we want to we calculate the information about $c$ at $t+\Delta t$ on the same regular \textit{Eulerian} grid. To do this, we use
 $$c(\ve X_i(t+\Delta t),t+\Delta t) = c({\ve X}_i(t),t).$$
 $\ve X_i(t+\Delta t) = \ve x_i$ since it is on the Eulerian grid, and we also use the notation $\hat{\ve x}_i = {\ve X}_i(t)$ is the departure point for the fluid parcel marked by $\ve X_i(t+\Delta t)$ such that a \textit{Lagrangian} fluid trajectory goes through $\hat{\ve x}_i$ (resp. ${\ve x}_i$) at time $t$ (resp. $t+\Delta t$).
 The Lagrangian treatment of advection in each timestep allows for bigger time steps to be taken, and we still maintain the grid structure in Eulerian space. 
 
-In general the departure points $\hat{\ve x}_i$ will not be on a grid point, therefore we need to interpolate to obtain an estimate. And except in trivial flows, we do not know the departure point $\hat{\ve x}_i$ exactly, so we need to numerically solve for an approximation. The main question to answer for \sml\;numerical method is how do we calculate the departure points $\hat{\ve{x}}_i$ and how do we interpolate, and what are their properties. 
+In general the departure points $\hat{\ve x}_i$ will not be on a grid point, therefore we need to interpolate to obtain an estimate. Except in trivial flows, we do not know the departure point $\hat{\ve x}_i$ exactly, so we need to numerically solve for an approximation. The main question to answer for \sml\;numerical method is how do we calculate the departure points $\hat{\ve{x}}_i$ and how do we interpolate, and what are their properties. 
 
 For the rest of the report we will explore several time integrating and space interpolation schemes of various order. We will use them to solve the linear advection problem \eqref{eq:linear_adv}, but also nonlinear advection problem like the 2D inviscid and incompressible Navier-Stokes equation \eqref{eq:2d_Nav}. The report will be organized as such: in Section \ref{sec:interp1D} we will test many interpolation schemes by using them to solve the 1D linear advection scheme with constant velocity. Section \ref{sec:linear_adv} contains the test of \sml\;Method on 2D linear advection problem (with constant and variable, but known a priori, velocity field). Section \ref{sec:nonli_adv} studies \sml\;Method for 2D nonlinear advection problem (2D Navier-Stokes). And finally in Section \ref{sec:adv_NS} we solve linear advection problems where the velocity is obtained numerically. 
 
 The code used in this report is available \href{https://gitfront.io/r/ryansjdu/28f425abdfa7e44aff8ed6258556c272cf10d3ea/CompPDEs-FinalProj/}{here}. To run them, you will also need to setup some tools available \href{https://github.com/Empyreal092/MATLAB_Tool}{here}. 
 
-\section{Interpolation Schemes, Tested in 1D Constant Advection}\label{sec:interp1D}
+\section{Interpolation schemes, tested in 1D constant advection}\label{sec:interp1D}
 We first investigate the property of some interpolation scheme when used in Semi-Lagrangian methods. We solve 1D constant velocity advection problem: 
 \begin{align*}
         \frac{\DD}{\DD t}c(X(t),t) = \frac{\pe}{\pe t}c(x,t)+ u \frac{\pe}{\pe x}c(x,t) = 0.
 \end{align*}
 This problem is enough to show the properties of various interpolation schemes, and it is easy to visualize so that we can determine the nature of the error produced. Variable velocity case would not help with our investigation, since timestep error would pollute the interpolation error. %And it is harder to justify \eqref{eq:linear_adv} in 1D when velocity is non-constant and thus compressible (but possible, see \cite[(1-3)]{diamantakis}). 
 
-We set the domain to be $[0,1)$ periodic, and solve for $t\in [0,1]$. $u = 1$ constant so that at $T = 1$, the tracer should be advection around the domain to its original position. This provide us with a test of accuracy of the solution. Since $u$ is constant, we know the departure points a priori thus interpolation is the only source of errors. There is no error in time, we fix the timestep constant as 7 (this is an odd number, and $Nx$ is always even, to ensure that we are not landing on a grid point). To investigate the order of convergence for the interpolation method, we vary the spacial resolution ($Nx = 8:1024$). Note that our CFL number is larger than one and reaching about 150 when the spatial resolution is the most dense. This corroborate the fact that the \sml\;method is unconditionally stable. We solve the problem with a power of trigonometric function initial condition:
+We set the domain to be $[0,1)$ periodic, and solve for $t\in [0,1]$. $u = 1$ constant so that at $T = 1$, the tracer should be advection around the domain to its original position. This provide us with a test of accuracy of the solution. Since $u$ is constant, we know the departure points a priori thus interpolation is the only source of errors. There is no error in time, we fix the timestep constant as 7 (this is an odd number, and $Nx$ is always even, to ensure that we are not landing on a grid point). To investigate the order of convergence for the interpolation method, we vary the spacial resolution ($Nx = 8:1024$). Note that our CFL number is larger than one and reaching about 150 when the spatial resolution is the most dense. This corroborates the fact that the \sml\;method is unconditionally stable. We solve the problem with a power of trigonometric function initial condition:
 \begin{align*}
     c(x,0) &= [\sin(\pi x)]^p \hspace{1cm}\text{with }p = 40.
 \end{align*}
 
-We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function as well as spectral interpolation method based on Flatiron Institute Nonuniform Fast Fourier Transform (FINUFFT) \cite{finufft_1,finufft_2}. Note that for MATLAB's \texttt{interp1} function, we feed it padded data where we extend the function on the left and right by five points using periodicity. For all query point, we mod it to make sure that it says within $[0,L)$. (We do not use Lagrange polynomial interpolation mostly since I could not find a good implementation in MATLAB available.\footnote{In my search, I saw claims that there is a reason why (quadratic and cubic) Lagrange polynomial is not implemented in MATLAB, and it is because it is a bad idea. But I could not figure out why it is a bad idea. I don't think it is because of the Runge's phenomenon since it is only application when the polynomial order is much higher than 3.}) We start with \texttt{linear}, which is Lagrange linear interpolation. Fig. \ref{fig:1D_cons_linear_} shows the result: the left is comparison of the numerical solutions to the truth, and the right is the plot for order of convergence. We see that the error is mainly diffusive, and the order of the interpolation is second. For constant velocity, \sml\;method is equivalent to the upwind method when the CFL number is less then one. Therefore it is reassuring to see that the nature of the error is the same (diffusive).
+We investigate a handful of interpolation methods implemented in MATLAB's \texttt{interp1} function as well as spectral interpolation method based on Flatiron Institute Nonuniform Fast Fourier Transform (FINUFFT) \cite{finufft_1,finufft_2}. Note that for MATLAB's \texttt{interp1} function, we feed it padded data where we extend the function on the left and right by five points using periodicity. For all query point, we mod it to make sure that it stays within $[0,L)$. We start with \texttt{linear}, which is Lagrange linear interpolation. Fig. \ref{fig:1D_cons_linear_} shows the result: the left is comparison of the numerical solutions to the truth, and the right is the plot for order of convergence. We see that the error is mainly diffusive, and the order of the interpolation is second. For constant velocity, \sml\;method is equivalent to the upwind method when the CFL number is less then one. Therefore it is reassuring to see that the nature of the error is the same (diffusive).
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_cons_linear_sol}
     \includegraphics{figs/1D_cons_linear_convord}
     \caption{}\label{fig:1D_cons_linear_}
 \end{figure}
-Now we look at \texttt{cubic}, which is not cubic Lagrangian, but instead the cubic interpolation in \cite{keys_cubic_1981} and \texttt{spline}, cubic spline. Fig. \ref{fig:1D_cons_cubic_} and Fig. \ref{fig:1D_cons_spline_} shows the result for \texttt{cubic} and \texttt{spline} respectively. For both methods, the error is both diffusive and dispersive. The convergence order of \texttt{cubic} is third, this corroborate that this is not cubic Lagrangian, since it should be of fourth order. Cubic \texttt{spline} is of fourth order, as we expected.
+Now we look at \texttt{cubic}, which is not cubic Lagrangian, but instead the cubic interpolation in \cite{keys_cubic_1981} and \texttt{spline}, cubic spline\footnote{The cubic spline in this note is not technically correct. In the periodic case, we need to use periodic spline if we wish the first derivative of the two end points match (\texttt{csape} in MATLAB).}. Fig. \ref{fig:1D_cons_cubic_} and Fig. \ref{fig:1D_cons_spline_} shows the result for \texttt{cubic} and \texttt{spline} respectively. For both methods, the error is both diffusive and dispersive. The convergence order of \texttt{cubic} is third, this corroborate that this is not cubic Lagrangian, since it should be of fourth order. Cubic \texttt{spline} is of fourth order, as we expected.
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_cons_cubic_sol}
@@ -115,7 +119,7 @@ Next, FINUFFT. Since our data is periodic and on a regular grid, we can calculat
     \includegraphics{figs/1D_cons_finufft_convord}
     \caption{}\label{fig:1D_cons_finufft_}
 \end{figure}
-Finally, we study \texttt{pchip} and \texttt{makima}. They are similar in that they are both piecewise polynomial of order the most three, and they are designed to prevent overshoot. Fig. \ref{fig:1D_cons_pchip_} (resp. Fig. \ref{fig:1D_cons_makima_}) shows the result for \texttt{pchip} (resp. \texttt{makima}). The error is diffusive, it is also dispersive since the peak is asymmetric. But there is no undershoot on the left of the peak compared to \texttt{cubic} and \texttt{spline} in Fig. \ref{fig:1D_cons_cubic_} and Fig. \ref{fig:1D_cons_spline_}. This is a good feature since a negative tracer concentration $c$ is nonphysical (cf. limiters). The order of convergence of these two methods is not the same as the above methods. The uniform norm convergence order is one less than the convergence order in other norms. This is probably due to the corrections at extrema. 
+Finally, we study the Piecewise Cubic Hermite Interpolating Polynomial (\texttt{pchip}) \cite{FritschCarlson_80} and Modified Akima Interpolation (\texttt{makima}) \cite{Akima_70,Akima_74}. They are similar in that they are both piecewise polynomial of order the most three, and they are designed to prevent overshoot. Fig. \ref{fig:1D_cons_pchip_} (resp. Fig. \ref{fig:1D_cons_makima_}) shows the result for \texttt{pchip} (resp. \texttt{makima}). The error is diffusive, it is also dispersive since the peak is asymmetric. But there is no undershoot on the left of the peak compared to \texttt{cubic} and \texttt{spline} in Fig. \ref{fig:1D_cons_cubic_} and Fig. \ref{fig:1D_cons_spline_}. This is a good feature since a negative tracer concentration $c$ is nonphysical (cf. limiters). The order of convergence of these two methods is not the same as the above methods. The uniform norm convergence order is one less than the convergence order in other norms. This is probably due to the corrections at extrema. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_cons_pchip_sol}
@@ -140,21 +144,21 @@ We first show the result for \texttt{linear} in Fig. \ref{fig:1D_step_cons_linea
     \includegraphics{figs/1D_step_cons_linear_convord}
     \caption{}\label{fig:1D_step_cons_linear_}
 \end{figure}
-The order of convergence result does not look too difference from the right plot of Fig. \ref{fig:1D_step_cons_linear_} for \texttt{cubic}, \texttt{spline}, \texttt{pchip}, and \texttt{makima}, thus we will not show them. But the qualitative nature of the error are vert different and it is worth looking at and analyzing. \texttt{cubic} and \texttt{spline} has large oscillation near the discontinuity accompanied with overshoot and undershoot, as shown in Fig. \ref{fig:1D_step_cons_cubic_sol}.
+The order of convergence result does not look too different from the right plot of Fig. \ref{fig:1D_step_cons_linear_} for \texttt{cubic}, \texttt{spline}, \texttt{pchip}, and \texttt{makima}, thus we will not show them. But the qualitative nature of the error are very different and it is worth looking at and analyzing. \texttt{cubic} and \texttt{spline} has large oscillation near the discontinuity accompanied with overshoot and undershoot, as shown in Fig. \ref{fig:1D_step_cons_cubic_sol}.
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_step_cons_cubic_sol}
     \includegraphics{figs/1D_step_cons_spline_sol}
     \caption{}\label{fig:1D_step_cons_cubic_sol}
 \end{figure}
-In comparison \texttt{pchip} and \texttt{makima} does not have such issue, as shown in Fig. \ref{fig:1D_step_cons_pchip_sol}. This suggests that these two interpolation scheme is good for solving problems with discontinuities, say from shock. 
+In comparison \texttt{pchip} and \texttt{makima} does not have such issue, as shown in Fig. \ref{fig:1D_step_cons_pchip_sol}. This suggests that these two interpolation schemes are good for solving problems with discontinuities. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_step_cons_pchip_sol}
     \includegraphics{figs/1D_step_cons_makima_sol}
     \caption{}\label{fig:1D_step_cons_pchip_sol}
 \end{figure}
-Finally, we show the result from FINUFFT in Fig. \ref{fig:1D_step_cons_finufft_sol}. There is oscillation at the smallest scale of the resolution. This is likely due to the fact that for a discontinuous function, the Fourier coefficient decays very slowly. This fact is also represented in the error graph, now in \texttt{loglog} form, we can see that the error only converges in first order. 
+Finally, we show the result from FINUFFT in Fig. \ref{fig:1D_step_cons_finufft_sol}. There are oscillations at the smallest scale of the resolution. This is likely due to the fact that for a discontinuous function, the Fourier coefficient decays very slowly. This fact is also represented in the error graph, now in \texttt{loglog} form, we can see that the error only converges in first order. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/1D_step_cons_finufft_sol}
@@ -162,9 +166,9 @@ Finally, we show the result from FINUFFT in Fig. \ref{fig:1D_step_cons_finufft_s
     \caption{}\label{fig:1D_step_cons_finufft_sol}
 \end{figure}
 
-Wrapping up this section, we have experimentally investigated the nature of the error and the order of convergence of various interpolation methods implemented in MATLAB's \texttt{interp1} function as well as a spectral interpolation method. We will use \texttt{linear}, \texttt{cubic}, \texttt{spline}, and FINUFFT for the future sections. We will not use \texttt{pchip} and \texttt{makima} since they are only significantly different when the solution is discontinuous, but all our future example will be continuous. Also, they will make the order of convergence study of the full \sml\;schemes more confusing. But they should be considered when we run into future problems when there is discontinues in the solutions. 
+Wrapping up this section, we have experimentally investigated the nature of the error and the order of convergence of various interpolation methods implemented in MATLAB's \texttt{interp1} function as well as a spectral interpolation method. We will use \texttt{linear}, \texttt{cubic}, \texttt{spline}, and FINUFFT for the future sections. We will not use \texttt{pchip} and \texttt{makima} since they are only significantly different when the solution is discontinuous, but all our future example will be continuous. Also, they will make the order of convergence study of the full \sml\;schemes more confusing. But they should be considered when we run into future problems when there are discontinues in the solutions. 
 
-\section{Semi-Lagrangian Method for 2D Linear Advection}\label{sec:linear_adv}
+\section{Semi-Lagrangian method for 2D linear advection}\label{sec:linear_adv}
 We verify the lesson we learn from Section \ref{sec:interp1D} in 2D. We solve again the constant velocity advection problem with $[0,1)\times [0,1)$ with $\ve u = (1,1)$. We solve to $T = 2$ and compare the solution to the initial condition. We use a 2D trigonometric polynomial as initial condition:
 \begin{align}
     c(x,y,0) &= [\sin(\pi x)\sin(\pi y)]^p \hspace{1cm}\text{with }p = 2.\label{eq:sinp2}
@@ -177,7 +181,7 @@ We use $Nt = 15$ and $Nx = Ny = 8:256$ (CLF number = $1.2:34$). We show the resu
     \caption{}\label{fig:2D_const_adv_all_interp}
 \end{figure}
 
-Now we are familiar with the interpolation step of \sml\;methods, we deal with the time integration step. We first focus on solving the linear advection problem where we assume the velocity $\ve u$ is known at all time on the spatial grid. In particular, for the timestep from $t^n$ to $t^{n+1/2}$, we know for all $x_i$ on the spatial grid:
+Now we are familiar with the interpolation step of \sml\;methods, we deal with the time integration step. We first focus on solving the linear advection problem where we assume the velocity $\ve u$ is known at all time on the spatial grid. In particular, for the timestep from $t^n$ to $t^{n+1}$, we know for all $x_i$ on the spatial grid:
 \begin{align*}
     \ve u_i^{n} &= \ve u(\ve x_i,t^n);\\
     \ve u_i^{n+1/2} &= \ve u(\ve x_i,t^{+1/2});\\
@@ -201,7 +205,7 @@ We test the order of convergence on a sample problem. We use the inviscid Taylor
     u &= v_0-\cos\left(\frac{2\pi(x-v_0t)}{L}\right)\sin\left(\frac{2\pi(y-v_0t)}{L}\right)\nonumber\\
     v &= v_0+\sin\left(\frac{2\pi(x-v_0t)}{L}\right)\cos\left(\frac{2\pi(y-v_0t)}{L}\right).\label{eq:taylor}
 \end{align}
-And the initial tracer distribution is the three Gaussian peaks:
+And the initial tracer distribution consists of three Gaussian peaks:
 \begin{align}
     c(x,y,0) =& \exp\left( -5\left((x-\pi)^2+(y-3\pi/4)^2\right) \right)+\exp\left( -5\left((x-\pi)^2+(y-5\pi/4)^2\right) \right)\nonumber\\
     &-\frac{1}{2}\exp\left( -\frac{5}{2}\left((x-5\pi/4)^2+(y-5\pi/4)^2\right) \right).\label{eq:3Gauss}
@@ -213,7 +217,7 @@ We solve the problem numerically till $T = 0.5$ and empirically estimate the err
     \includegraphics{figs/c_final_IF-RK4PS}
     \caption{}\label{fig:c_init_IF}
 \end{figure}
-Then Fig. \ref{fig:c_final_Euler} shows on the left the tracer concentration that is solved by Euler Method at the finest space-time resolution and on the right the order of convergence from the empirically estimated error. Here we use $Nx = Ny= [2^5:2^{10}]$ but large timestep such that the CFL number $v_0\Delta t/\Delta x \approx 1.5$. This means $Nt = 3:55$, not many timesteps! (Note that Taylor vortex is a special flow that if we use it to advect a tracer for too long, the tracer field will develop small scale features that is hard to solve, thus we have chosen the rather short time window. See Section \ref{sec:adv_NS} for an example with a larger time window.)
+Then Fig. \ref{fig:c_final_Euler} shows on the left the tracer concentration that is solved by Euler Method at the finest space-time resolution and on the right the order of convergence from the empirically estimated error. Here we use $Nx = Ny= [2^5:2^{10}]$ but large timestep such that the CFL number $v_0\Delta t/\Delta x \approx 1.5$. This means $Nt = 3:55$, not many timesteps!
 \begin{figure}[H]
     \centering
     \includegraphics{figs/c_final_Euler}
@@ -300,7 +304,7 @@ Now that the departure point is solve to fifth order locally, we need a fifth or
 It is curious why \sml\ method literature does not use RK method to solve for the departure point. We check the cost by counting the number of interpolations and their requires order. We compare RK3, which should be third order, with MCD86: RK3 needs three third and a forth order interpolation, while MCD86 needs two second, two third, and two forth order interpolation. It seems MCD86 is more expensive. We comment that the second and third RK4 step looks like a fixed point solver, and it might be that the RK4 method and classic \sml\ methods are more similar than the form suggests. We will continue the discussion in Section \ref{sec:nonli_adv} for nonlinear advection. 
 
 We could replace all the interpolation with FINUFFT so that they are spectrally accurate. We give a large enough $Nx = Ny$ so that there is no spatial error (for 3 Gaussian, $Nx = Ny = 81$). Then we can fix the spatial resolution and improve accuracy by only refining the timestep. This is a good way to isolate the error produced by the timestepping. But this is also viable numerical method. In a sense, the method is pseudospectral but with with \sml\ timestepping. This has real advantage compared to the regular pseudospectral method for advection since it could take a lot bigger a timestep while still being stable. 
-For example, to solve the problem above, \sml\ Pseudospectral method /w FINUFFT is stable for CFL number up to 3 while the regular IF-RK4 Pseudospectral method is only stable when CFL number is less than 0.5. Fig. \ref{fig:conv_order_finu_} shows the convergence order result for \sml\ Pseudospectral and IF-RK4 Pseudospectral methods. We see that all the convergence order of \sml\ method stay the same. In particular, the error for the most accurate result for \sml\ RK4 Pseudospectral (RK4SLPs) method is $O(10^{-9})$, very small! And that is achieved with 54 timestep (i.e.: $\Delta t = 0.0093$). IF-RK4 Pseudospectral method does not each the same level of accuracy with same number of timestep (the $x$-axis of the IF-RK4 figure is large than the rest). To truly compare the two methods, we also need to know the cost per timestep. Assuming that FINUFFT cost as much as a standard uniform Fast Fourier Transform (FFT), we approximate the cost by counting the number of \texttt{fft/ifft} pairs per timestep. For IF-RK4, assume that the velocity is given in Fourier space and we solve for the tracer in Fourier space, we only need four pairs of \texttt{fft/ifft} per timestep. The RK4SLPs method needs four $u,v$ interpolation and one tracer field interpolation, and that is $4\times 2+1 = 9$ \texttt{fft/ifft} pairs. Therefore we could say a RK4SLPs step is as expensive as two IF-RK4 steps. But compare the stability and accuracy of the two methods shown in Fig. \ref{fig:conv_order_finu_}, we see that IF-RK4 needs more than two times the timestep to reach the same accuracy. Therefore we conclude that RK4SLPs is cheaper as a solver for linear advection.
+For example, to solve the problem above, \sml\ Pseudospectral method /w FINUFFT is stable for CFL number up to 3 while the regular IF-RK4 Pseudospectral method is only stable when CFL number is less than 0.5. Fig. \ref{fig:conv_order_finu_} shows the convergence order result for \sml\ Pseudospectral and IF-RK4 Pseudospectral methods. We see that all the convergence order of \sml\ method stay the same. In particular, the error for the most accurate result for \sml\ RK4 Pseudospectral (RK4SLPs) method is $O(10^{-9})$, very small! And that is achieved with 54 timestep (i.e.: $\Delta t = 0.0093$). IF-RK4 Pseudospectral method does not each the same level of accuracy with same number of timestep (the $x$-axis of the IF-RK4 figure is large than the rest). To truly compare the two methods, we also need to know the cost per timestep. Assuming that FINUFFT cost as much as a standard uniform Fast Fourier Transform (FFT), we approximate the cost by counting the number of \texttt{fft/ifft} pairs per timestep. For IF-RK4, assume that the velocity is given in Fourier space and we solve for the tracer in Fourier space, we only need four pairs of \texttt{fft/ifft} per timestep. The RK4SLPs method needs four $u,v$ interpolation and one tracer field interpolation, and that is $4\times 2+1 = 9$ \texttt{fft/ifft} pairs. Therefore we could say a RK4SLPs step is as expensive as two IF-RK4 steps. But compare the stability and accuracy of the two methods shown in Fig. \ref{fig:conv_order_finu_}, we see that IF-RK4 needs more than two times the timestep to reach the same accuracy. Therefore we conclude that RK4SLPs is cheaper as a solver for linear advection\footnote{Comment from Alex Donev: Pseudospectral methods could be combined with spectral deferred correction (SDC) to achieve much better accuracy in $\Delta t$. It is also worth noting that NUFFT only works for periodic functions on periodic domains. These factors should also be considered when we make the comparison}.
 \begin{figure}[H]
     \centering
     \includegraphics{figs/conv_order_finu_Euler}
@@ -311,7 +315,7 @@ For example, to solve the problem above, \sml\ Pseudospectral method /w FINUFFT 
     \caption{}\label{fig:conv_order_finu_}
 \end{figure}
 
-\section{Semi-Lagrangian Method for 2D Navier Stokes}\label{sec:nonli_adv}
+\section{Semi-Lagrangian method for 2D Navier Stokes}\label{sec:nonli_adv}
 We use \sml\ methods to numerically solve the incompressible inviscid Navier-Stokes equation:
 \begin{align}
     \begin{cases}
@@ -329,7 +333,7 @@ Then the vorticity-stream formulation is:
     &\pe_t\omega+\ve u\cdot\nabla\omega = 0\label{eq:vort_stream}\\
     \fff&\pe_t\omega+J(\psi,\omega) = 0\nonumber
 \end{align}
-and this equation is closed since $\ve u,\psi$ can be solved from $\omega$ via \eqref{eq:relate_omega_psi}. This is a nonlinear advection problem since the velocity that advect tracer field needs to solved from the tracer field $\omega$. Therefore for each timestep we only know the velocity information at time $t^n$. 
+and this equation is closed since $\ve u,\psi$ can be solved from $\omega$ via \eqref{eq:relate_omega_psi}. This is a nonlinear advection problem since the velocity that advect tracer field needs to be solved from the tracer field $\omega$. Therefore for each timestep we only know the velocity information at time $t^n$. 
 
 To test our \sml\ schemes, we use them to solve the 2D Navier-Stokes problem with two different initial condition. First, we initialize the $\omega$ field to be the one associated with the Taylor vortex \eqref{eq:taylor}. We use $L = 1$ and $v_0 = 1$ and solve till time $T = 0.25$. To obtain the error of the solver, we compare the error with the truth $\omega$ given by the formula. The second initial condition is the three Gaussians (now three vortices) given by \eqref{eq:3Gauss}. For this we use $L = 2\pi$ and $v_0 = 1$ and solve till time $T = 1.5$. We estimate the error empirically for this case. 
 
@@ -389,7 +393,7 @@ We continue the discussion of using RK method in \sml\ setting. The above result
 
 In general, for nonlinear advection problem, extrapolation to get an estimate of the velocity field seems sketchy to me even when it seems that it works for low order extrapolation with moderate timestep (but still CFL number larger than one). And it is not a good idea to push the order higher, as shown in the RK4 example. I am interested in if there is an alternative high (larger than three) order \sml\ method for nonlinear advection. 
 
-\section{Semi-Lagrangian Method for 2D Linear Advection, Cont.}\label{sec:adv_NS}
+\section{Semi-Lagrangian method for 2D linear advection, cont.}\label{sec:adv_NS}
 We finish the note by solving linear advection problems where the velocity is obtained numerically. Given the disappointing result of \sml\ method when applied to nonlinear advection, we choose to stick with IF-RK4 method to solve the velocity. But for advection of the tracer, we use RK4SLPs to solve. This work well with the pseudospectral IF-RK4 since we can keep space resolution fixed while improve the accuracy by refining time. Since \sml\ method allows for larger timestep than IF-RK4, we use four steps of IF-RK4 to solve velocity within each single step of tracer solve using RK4SLPs. Note here that we record the velocity at middle time $t^{n+1/2}$ and end time $t^{n+1}$ for use in the tracer solve.
 
 First we solve the problem we had in Section \ref{sec:linear_adv} but now with the velocity numerically solved. We initialize the $\omega$ field with the Taylor vortices \eqref{eq:taylor} and the tracer field as three Gaussians \eqref{eq:3Gauss}. We again have $L = 2\pi, v_0 = 1$, and we solve still $T = 0.5$. We fix $Nx = 81$ and refine $Nt = 2:32$. We save the data from a high fidelity (estimated error less than $10^{-14}$) result from the IF-RK4 method in Section \ref{sec:linear_adv} as the ``truth'' to calculate the error. Fig. \ref{fig:NSAdv_c_final_Taylor_3Gaussian} left shows the final tracer field for the solute with the finest time resolution, and the right shows the convergence result. We see that the final tracer field is similar to the ones we have seen in Section \ref{sec:linear_adv}, this is reassuring. And we see fourth order convergence once the timestep is small enough for the IF-RK4 velocity solver. We note here that a potential fourth order \sml\ nonlinear advection solver should remove this barrier. 
@@ -400,7 +404,7 @@ First we solve the problem we had in Section \ref{sec:linear_adv} but now with t
     \caption{}\label{fig:NSAdv_c_final_Taylor_3Gaussian}
 \end{figure}
 
-Now we solve the problem where the velocity is initialize with three vortices \eqref{eq:3Gauss}, and the tracer has initial condition sinp \eqref{eq:sinp2}. Here we use empirical error estimate. We set $L = 2\pi, v_0 = 1$ but now solve till $T = 4$. We fix $Nx = 49$. Fig. \ref{fig:NSAdv_c_final_3Vortices_sinp} shows the result. Essentially the same sized $\Delta t$ is needed to keep IF-RK4 stable. Then we have convincing fourth order convergence. This is the example where we solve the linear advection problem to moderately long time while still keeping accuracy.
+Now we solve the problem where the velocity is initialize with three vortices \eqref{eq:3Gauss}, and the tracer has initial condition sinp \eqref{eq:sinp2}. Here we use empirical error estimate. We set $L = 2\pi, v_0 = 1$ but now solve till $T = 4$. We fix $Nx = 49$. Fig. \ref{fig:NSAdv_c_final_3Vortices_sinp} shows the result. Essentially the same sized $\Delta t$ is needed to keep IF-RK4 stable. Then we have convincing fourth order convergence. 
 \begin{figure}[H]
     \centering
     \includegraphics{figs/NSAdv_c_final_3Vortices_sinp}
