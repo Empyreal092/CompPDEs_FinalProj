@@ -55,7 +55,7 @@ We explore using Semi-Lagrangian numerical methods to solve linear and nonlinear
 This note is an updated version of the final project submission for the numerics class by Alex Donev in Fall of 2021. This version incorporates some comments by Alex Donev on the original submitted version. There is no major revisions and some mistakes were acknowledged but uncorrected. This note should act as a sample of final project for this class, instead of a polished note for the public.
 
 \section{Introduction}
-We want to solve the linear advection of a passive tracer. Assume $\nabla\cdot\ve u = 0$, we have the Partial Differential Equation (PDE):
+We want to solve the linear non-diffusive advection of a passive tracer\footnote{It is possible to add diffusion in the \sml framework, see \cite{SpiegelmanKatz_06}.}. Assume $\nabla\cdot\ve u = 0$, we have the Partial Differential Equation (PDE):
 \begin{align}
     \frac{\DD}{\DD t}c(\ve X(t),t) = \frac{\pe}{\pe t}c(\ve x,t)+\ve u(\ve x,t)\cdot\nabla c(\ve x,t) = 0\label{eq:linear_adv}
 \end{align}
