@@ -1,0 +1,3 @@
+# An Exploration of Semi-Lagrangian Methods for Advection
+## My Final Project for [Aleks Donev](https://math.nyu.edu/people/profiles/DONEV_Aleksandar.html)'s [Computational PDEs class](https://adonev.github.io/CompPDEs/index.html)
+I learned so much from this class. I have found the materials in this class useful many times during my research. Somewhat more importantly, I learned to be rigurous and careful, when doing numerics and beyond. Aleks cared about quality of presentations, this is reflected in this [communication in math class](https://adonev.github.io/WrittenOral/). Whenever I make figures for publication, I wonder if he would think if they are acceptable. And I know I still need to work on my writing :).
